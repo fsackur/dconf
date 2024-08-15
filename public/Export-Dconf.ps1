@@ -4,11 +4,14 @@ function Export-Dconf
     param
     (
         [Parameter(Mandatory, Position = 0)]
-        [string]$Path
+        [string[]]$Path
     )
 
-    $Path = $Path -replace '^/?', '/' -replace '(?<=[^/])$', '/'
-    dconf dump $Path | Resolve-DconfPath -Path $Path
+    foreach ($_Path in $Path)
+    {
+        $_Path = $_Path -replace '^/?', '/' -replace '(?<=[^/])$', '/'
+        dconf dump $_Path | Resolve-DconfPath -Path $_Path
+    }
 }
 
 Register-ArgumentCompleter -CommandName Export-Dconf -ParameterName Path -ScriptBlock {

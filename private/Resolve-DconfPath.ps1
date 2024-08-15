@@ -13,14 +13,18 @@ function Resolve-DconfPath
 
     process
     {
-        if ($Text -match '^\[(?<Path>.+)\]\s*$')
+        $Lines = $Text -split '\r?\n'
+        foreach ($Line in $Lines)
         {
-            $_Path = $Path, $Matches.Path -join '/' -replace '/{2,}', '/'
-            "[$_Path]"
-        }
-        else
-        {
-            $Text
+            if ($Line -match '^\[(?<Path>.+)\]\s*$')
+            {
+                $_Path = $Path, $Matches.Path -join '/' -replace '/{2,}', '/' -replace '/$'
+                "[$_Path]"
+            }
+            else
+            {
+                $Line
+            }
         }
     }
 

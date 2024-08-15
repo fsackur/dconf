@@ -1,3 +1,6 @@
+BeforeAll {& (Get-Module dconf -ea Stop) {function Script:dconf {}}}
+AfterAll {& (Get-Module dconf -ea Stop) {Remove-Item function:/dconf}}
+
 Describe "Import-Dconf" {
     BeforeAll {
         Mock -ModuleName dconf dconf {

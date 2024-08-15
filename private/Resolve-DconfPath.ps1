@@ -23,4 +23,6 @@ function Resolve-DconfPath
             $Text
         }
     }
+
+    end {""}
 }

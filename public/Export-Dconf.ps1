@@ -8,7 +8,7 @@ function Export-Dconf
     )
 
     $Path = $Path -replace '^/?', '/' -replace '(?<=[^/])$', '/'
-    dconf dump $Path
+    dconf dump $Path | Resolve-DconfPath -Path $Path
 }
 
 Register-ArgumentCompleter -CommandName Export-Dconf -ParameterName Path -ScriptBlock {

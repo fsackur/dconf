@@ -26,7 +26,7 @@ function Import-Dconf
         $Lines = ($InputObject | Out-String).Trim() -split '\r?\n'
         foreach ($Line in $Lines)
         {
-            if ([string]::IsNullOrWhiteSpace($Line))
+            if ([string]::IsNullOrWhiteSpace($Line) -or $Line.StartsWith('#'))
             {
                 continue
             }

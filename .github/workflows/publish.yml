@@ -1,0 +1,41 @@
+name: Publish
+
+on:
+  issue_comment:
+    types: [created, edited, deleted]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: pwsh
+
+jobs:
+  # test:
+  #   if: ${{ github.event.issue.pull_request }}
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+
+  #     - name: Restore dependencies
+  #       id: restore-dependencies
+  #       uses: actions/cache/restore@v4
+  #       with:
+  #         path: ~/.local/share/powershell/Modules/
+  #         key: pwsh-module-cache-${{ hashFiles('dconf.build.ps1') }}
+  #         restore-keys: pwsh-module-cache-
+
+  #     - name: Package
+  #       run: Invoke-Build Build, Package
+
+  #     - name: Test
+  #       run: Invoke-Build Test
+
+  merge:
+    if: ${{ github.event.issue.pull_request }}
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo ${{ github.event }}

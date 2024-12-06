@@ -108,7 +108,7 @@ if ($Bootstrap)
     . $InstallBuildDependencies
     return
 }
-#region Handle direct invocation (i.e. not Invoke-Build)
+#endregion Handle direct invocation (i.e. not Invoke-Build)
 
 task InstallBuildDependencies $InstallBuildDependencies
 

@@ -48,10 +48,3 @@ function Export-Dconf
         $Content
     }
 }
-
-Register-ArgumentCompleter -CommandName Export-Dconf -ParameterName Path -ScriptBlock {
-    param ($commandName, $parameterName, $wordToComplete, $commandAst, $fakeBoundParameters)
-
-    $Paths = Get-DconfPath
-    (@($Paths) -like "$wordToComplete*"), (@($Paths) -like "*$wordToComplete*") | Write-Output
-}

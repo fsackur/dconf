@@ -1,0 +1,295 @@
+name: Publish
+
+on:
+  issue_comment:
+    types: [created, edited]
+  pull_request:
+    types: [closed]
+
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: pwsh
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: echo
+        run: echo '${{ toJson(github.event) }}'
+  # test:
+  #   if: ${{ github.event.issue.pull_request }}
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+
+  #     - name: Restore dependencies
+  #       id: restore-dependencies
+  #       uses: actions/cache/restore@v4
+  #       with:
+  #         path: ~/.local/share/powershell/Modules/
+  #         key: pwsh-module-cache-${{ hashFiles('dconf.build.ps1') }}
+  #         restore-keys: pwsh-module-cache-
+
+  #     - name: Package
+  #       run: Invoke-Build Build, Package
+
+  #     - name: Test
+  #       run: Invoke-Build Test
+
+  # merge:
+  #   if: ${{ github.event.issue.pull_request }}
+  #   # needs: test
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: echo
+  #       run: echo '${{ toJson(github.event) }}'
+# {
+#   "action": "created",
+#   "comment": {
+#     "author_association": "OWNER",
+#     "body": "blah",
+#     "created_at": "2024-12-06T22:13:25Z",
+#     "html_url": "https://github.com/fsackur/dconf/pull/3#issuecomment-2524281613",
+#     "id": 2524281613,
+#     "issue_url": "https://api.github.com/repos/fsackur/dconf/issues/3",
+#     "node_id": "IC_kwDOMj4s6c6WdXsN",
+#     "performed_via_github_app": null,
+#     "reactions": {
+#       "+1": 0,
+#       "-1": 0,
+#       "confused": 0,
+#       "eyes": 0,
+#       "heart": 0,
+#       "hooray": 0,
+#       "laugh": 0,
+#       "rocket": 0,
+#       "total_count": 0,
+#       "url": "https://api.github.com/repos/fsackur/dconf/issues/comments/2524281613/reactions"
+#     },
+#     "updated_at": "2024-12-06T22:13:25Z",
+#     "url": "https://api.github.com/repos/fsackur/dconf/issues/comments/2524281613",
+#     "user": {
+#       "avatar_url": "https://avatars.githubusercontent.com/u/3678789?v=4",
+#       "events_url": "https://api.github.com/users/fsackur/events{/privacy}",
+#       "followers_url": "https://api.github.com/users/fsackur/followers",
+#       "following_url": "https://api.github.com/users/fsackur/following{/other_user}",
+#       "gists_url": "https://api.github.com/users/fsackur/gists{/gist_id}",
+#       "gravatar_id": "",
+#       "html_url": "https://github.com/fsackur",
+#       "id": 3678789,
+#       "login": "fsackur",
+#       "node_id": "MDQ6VXNlcjM2Nzg3ODk=",
+#       "organizations_url": "https://api.github.com/users/fsackur/orgs",
+#       "received_events_url": "https://api.github.com/users/fsackur/received_events",
+#       "repos_url": "https://api.github.com/users/fsackur/repos",
+#       "site_admin": false,
+#       "starred_url": "https://api.github.com/users/fsackur/starred{/owner}{/repo}",
+#       "subscriptions_url": "https://api.github.com/users/fsackur/subscriptions",
+#       "type": "User",
+#       "url": "https://api.github.com/users/fsackur",
+#       "user_view_type": "public"
+#     }
+#   },
+#   "issue": {
+#     "active_lock_reason": null,
+#     "assignee": null,
+#     "assignees": [],
+#     "author_association": "OWNER",
+#     "body": null,
+#     "closed_at": null,
+#     "comments": 4,
+#     "comments_url": "https://api.github.com/repos/fsackur/dconf/issues/3/comments",
+#     "created_at": "2024-12-06T21:56:40Z",
+#     "draft": false,
+#     "events_url": "https://api.github.com/repos/fsackur/dconf/issues/3/events",
+#     "html_url": "https://github.com/fsackur/dconf/pull/3",
+#     "id": 2723995084,
+#     "labels": [],
+#     "labels_url": "https://api.github.com/repos/fsackur/dconf/issues/3/labels{/name}",
+#     "locked": false,
+#     "milestone": null,
+#     "node_id": "PR_kwDOMj4s6c6EYKuQ",
+#     "number": 3,
+#     "performed_via_github_app": null,
+#     "pull_request": {
+#       "diff_url": "https://github.com/fsackur/dconf/pull/3.diff",
+#       "html_url": "https://github.com/fsackur/dconf/pull/3",
+#       "merged_at": null,
+#       "patch_url": "https://github.com/fsackur/dconf/pull/3.patch",
+#       "url": "https://api.github.com/repos/fsackur/dconf/pulls/3"
+#     },
+#     "reactions": {
+#       "+1": 0,
+#       "-1": 0,
+#       "confused": 0,
+#       "eyes": 0,
+#       "heart": 0,
+#       "hooray": 0,
+#       "laugh": 0,
+#       "rocket": 0,
+#       "total_count": 0,
+#       "url": "https://api.github.com/repos/fsackur/dconf/issues/3/reactions"
+#     },
+#     "repository_url": "https://api.github.com/repos/fsackur/dconf",
+#     "state": "open",
+#     "state_reason": null,
+#     "timeline_url": "https://api.github.com/repos/fsackur/dconf/issues/3/timeline",
+#     "title": "Testing workflow",
+#     "updated_at": "2024-12-06T22:13:26Z",
+#     "url": "https://api.github.com/repos/fsackur/dconf/issues/3",
+#     "user": {
+#       "avatar_url": "https://avatars.githubusercontent.com/u/3678789?v=4",
+#       "events_url": "https://api.github.com/users/fsackur/events{/privacy}",
+#       "followers_url": "https://api.github.com/users/fsackur/followers",
+#       "following_url": "https://api.github.com/users/fsackur/following{/other_user}",
+#       "gists_url": "https://api.github.com/users/fsackur/gists{/gist_id}",
+#       "gravatar_id": "",
+#       "html_url": "https://github.com/fsackur",
+#       "id": 3678789,
+#       "login": "fsackur",
+#       "node_id": "MDQ6VXNlcjM2Nzg3ODk=",
+#       "organizations_url": "https://api.github.com/users/fsackur/orgs",
+#       "received_events_url": "https://api.github.com/users/fsackur/received_events",
+#       "repos_url": "https://api.github.com/users/fsackur/repos",
+#       "site_admin": false,
+#       "starred_url": "https://api.github.com/users/fsackur/starred{/owner}{/repo}",
+#       "subscriptions_url": "https://api.github.com/users/fsackur/subscriptions",
+#       "type": "User",
+#       "url": "https://api.github.com/users/fsackur",
+#       "user_view_type": "public"
+#     }
+#   },
+#   "repository": {
+#     "allow_forking": true,
+#     "archive_url": "https://api.github.com/repos/fsackur/dconf/{archive_format}{/ref}",
+#     "archived": false,
+#     "assignees_url": "https://api.github.com/repos/fsackur/dconf/assignees{/user}",
+#     "blobs_url": "https://api.github.com/repos/fsackur/dconf/git/blobs{/sha}",
+#     "branches_url": "https://api.github.com/repos/fsackur/dconf/branches{/branch}",
+#     "clone_url": "https://github.com/fsackur/dconf.git",
+#     "collaborators_url": "https://api.github.com/repos/fsackur/dconf/collaborators{/collaborator}",
+#     "comments_url": "https://api.github.com/repos/fsackur/dconf/comments{/number}",
+#     "commits_url": "https://api.github.com/repos/fsackur/dconf/commits{/sha}",
+#     "compare_url": "https://api.github.com/repos/fsackur/dconf/compare/{base}...{head}",
+#     "contents_url": "https://api.github.com/repos/fsackur/dconf/contents/{+path}",
+#     "contributors_url": "https://api.github.com/repos/fsackur/dconf/contributors",
+#     "created_at": "2024-08-15T12:30:59Z",
+#     "default_branch": "main",
+#     "deployments_url": "https://api.github.com/repos/fsackur/dconf/deployments",
+#     "description": "Tools for interacting with dconf settings",
+#     "disabled": false,
+#     "downloads_url": "https://api.github.com/repos/fsackur/dconf/downloads",
+#     "events_url": "https://api.github.com/repos/fsackur/dconf/events",
+#     "fork": false,
+#     "forks": 0,
+#     "forks_count": 0,
+#     "forks_url": "https://api.github.com/repos/fsackur/dconf/forks",
+#     "full_name": "fsackur/dconf",
+#     "git_commits_url": "https://api.github.com/repos/fsackur/dconf/git/commits{/sha}",
+#     "git_refs_url": "https://api.github.com/repos/fsackur/dconf/git/refs{/sha}",
+#     "git_tags_url": "https://api.github.com/repos/fsackur/dconf/git/tags{/sha}",
+#     "git_url": "git://github.com/fsackur/dconf.git",
+#     "has_discussions": false,
+#     "has_downloads": true,
+#     "has_issues": true,
+#     "has_pages": false,
+#     "has_projects": true,
+#     "has_wiki": true,
+#     "homepage": null,
+#     "hooks_url": "https://api.github.com/repos/fsackur/dconf/hooks",
+#     "html_url": "https://github.com/fsackur/dconf",
+#     "id": 842935529,
+#     "is_template": false,
+#     "issue_comment_url": "https://api.github.com/repos/fsackur/dconf/issues/comments{/number}",
+#     "issue_events_url": "https://api.github.com/repos/fsackur/dconf/issues/events{/number}",
+#     "issues_url": "https://api.github.com/repos/fsackur/dconf/issues{/number}",
+#     "keys_url": "https://api.github.com/repos/fsackur/dconf/keys{/key_id}",
+#     "labels_url": "https://api.github.com/repos/fsackur/dconf/labels{/name}",
+#     "language": "PowerShell",
+#     "languages_url": "https://api.github.com/repos/fsackur/dconf/languages",
+#     "license": {
+#       "key": "mit",
+#       "name": "MIT License",
+#       "node_id": "MDc6TGljZW5zZTEz",
+#       "spdx_id": "MIT",
+#       "url": "https://api.github.com/licenses/mit"
+#     },
+#     "merges_url": "https://api.github.com/repos/fsackur/dconf/merges",
+#     "milestones_url": "https://api.github.com/repos/fsackur/dconf/milestones{/number}",
+#     "mirror_url": null,
+#     "name": "dconf",
+#     "node_id": "R_kgDOMj4s6Q",
+#     "notifications_url": "https://api.github.com/repos/fsackur/dconf/notifications{?since,all,participating}",
+#     "open_issues": 1,
+#     "open_issues_count": 1,
+#     "owner": {
+#       "avatar_url": "https://avatars.githubusercontent.com/u/3678789?v=4",
+#       "events_url": "https://api.github.com/users/fsackur/events{/privacy}",
+#       "followers_url": "https://api.github.com/users/fsackur/followers",
+#       "following_url": "https://api.github.com/users/fsackur/following{/other_user}",
+#       "gists_url": "https://api.github.com/users/fsackur/gists{/gist_id}",
+#       "gravatar_id": "",
+#       "html_url": "https://github.com/fsackur",
+#       "id": 3678789,
+#       "login": "fsackur",
+#       "node_id": "MDQ6VXNlcjM2Nzg3ODk=",
+#       "organizations_url": "https://api.github.com/users/fsackur/orgs",
+#       "received_events_url": "https://api.github.com/users/fsackur/received_events",
+#       "repos_url": "https://api.github.com/users/fsackur/repos",
+#       "site_admin": false,
+#       "starred_url": "https://api.github.com/users/fsackur/starred{/owner}{/repo}",
+#       "subscriptions_url": "https://api.github.com/users/fsackur/subscriptions",
+#       "type": "User",
+#       "url": "https://api.github.com/users/fsackur",
+#       "user_view_type": "public"
+#     },
+#     "private": false,
+#     "pulls_url": "https://api.github.com/repos/fsackur/dconf/pulls{/number}",
+#     "pushed_at": "2024-12-06T22:13:05Z",
+#     "releases_url": "https://api.github.com/repos/fsackur/dconf/releases{/id}",
+#     "size": 34,
+#     "ssh_url": "git@github.com:fsackur/dconf.git",
+#     "stargazers_count": 0,
+#     "stargazers_url": "https://api.github.com/repos/fsackur/dconf/stargazers",
+#     "statuses_url": "https://api.github.com/repos/fsackur/dconf/statuses/{sha}",
+#     "subscribers_url": "https://api.github.com/repos/fsackur/dconf/subscribers",
+#     "subscription_url": "https://api.github.com/repos/fsackur/dconf/subscription",
+#     "svn_url": "https://github.com/fsackur/dconf",
+#     "tags_url": "https://api.github.com/repos/fsackur/dconf/tags",
+#     "teams_url": "https://api.github.com/repos/fsackur/dconf/teams",
+#     "topics": [],
+#     "trees_url": "https://api.github.com/repos/fsackur/dconf/git/trees{/sha}",
+#     "updated_at": "2024-12-06T22:13:08Z",
+#     "url": "https://api.github.com/repos/fsackur/dconf",
+#     "visibility": "public",
+#     "watchers": 0,
+#     "watchers_count": 0,
+#     "web_commit_signoff_required": false
+#   },
+#   "sender": {
+#     "avatar_url": "https://avatars.githubusercontent.com/u/3678789?v=4",
+#     "events_url": "https://api.github.com/users/fsackur/events{/privacy}",
+#     "followers_url": "https://api.github.com/users/fsackur/followers",
+#     "following_url": "https://api.github.com/users/fsackur/following{/other_user}",
+#     "gists_url": "https://api.github.com/users/fsackur/gists{/gist_id}",
+#     "gravatar_id": "",
+#     "html_url": "https://github.com/fsackur",
+#     "id": 3678789,
+#     "login": "fsackur",
+#     "node_id": "MDQ6VXNlcjM2Nzg3ODk=",
+#     "organizations_url": "https://api.github.com/users/fsackur/orgs",
+#     "received_events_url": "https://api.github.com/users/fsackur/received_events",
+#     "repos_url": "https://api.github.com/users/fsackur/repos",
+#     "site_admin": false,
+#     "starred_url": "https://api.github.com/users/fsackur/starred{/owner}{/repo}",
+#     "subscriptions_url": "https://api.github.com/users/fsackur/subscriptions",
+#     "type": "User",
+#     "url": "https://api.github.com/users/fsackur",
+#     "user_view_type": "public"
+#   }
+# }

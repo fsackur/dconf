@@ -12,6 +12,9 @@ branches:
 
 skip_branch_with_pr: true
 
+skip_commits:
+  message: /^v\d+\.\d+\.\d+/
+
 environment:
   GITHUB_TOKEN:
     secure: +uoFiZQbo1uuQJWgZn3DKizlzMV/Ji9V9YJxCwtUvDRkwklysZSEMJiNgbiBlBS8

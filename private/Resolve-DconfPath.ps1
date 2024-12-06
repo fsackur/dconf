@@ -1,10 +1,16 @@
 function Resolve-DconfPath
 {
+    <#
+        .DESCRIPTION
+        Replaces relative paths with full paths in output from dconf dump.
+    #>
+
     [CmdletBinding()]
     param
     (
         [Parameter(Mandatory, Position = 0)]
-        [string]$Path,
+        [Alias('Path')]
+        [string]$BasePath,
 
         [Parameter(ValueFromPipeline, Mandatory, Position = 1)]
         [AllowEmptyString()]
@@ -16,10 +22,11 @@ function Resolve-DconfPath
         $Lines = $Text -split '\r?\n'
         foreach ($Line in $Lines)
         {
+            # This path is relative to the path passed to dconf dump
             if ($Line -match '^\[(?<Path>.+)\]\s*$')
             {
-                $_Path = $Path, $Matches.Path -join '/' -replace '/{2,}', '/' -replace '/$'
-                "[$_Path]"
+                $Path = $BasePath, $Matches.Path -join '/' -replace '/{2,}', '/' -replace '^/' -replace '/$'
+                "[$Path]"
             }
             else
             {

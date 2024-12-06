@@ -1,61 +1,64 @@
 function Import-Dconf
 {
+    <#
+        .SYNOPSIS
+        Imports dconf settings from file.
+
+        .DESCRIPTION
+        Imports dconf settings from file. Backs up all settings before importing.
+
+        .PARAMETER File
+        Path to file containing dconf settings. The file can be generated with `Export-Dconf` or
+        with `dconf dump /`. Content should be key-value pairs, section headers in square brackets.
+
+        Note that when using `dconf dump`, the section headers will be relative to the path passed
+        to `dconf dump`. If this was not `/` (the root path), then the import will succeed, but
+        incorrect paths and keys will be created. Export-Dconf prevents this by resolving paths to
+        absolute paths.
+
+        .PARAMETER Filter
+        Limit the dconf paths to import. Only keys that are children of the dconf paths will be
+        imported.
+
+        .PARAMETER SkipBackup
+        Do not back up dconf settings before import.
+
+        .PARAMETER BackupPath
+        Path to backup file. By default, this will be `/tmp/dconf.xxxxxxxxxxxxxxxxxx`.
+
+        .EXAMPLE
+        Import-Dconf -File ./dconf.dump
+
+        Imports all settings from `dconf.dump`.
+
+        .EXAMPLE
+        Import-Dconf -File ./dconf.dump -Filter org/gnome/shell/extensions
+
+        Imports settings under `/org/gnome/shell/extensions/` from `dconf.dump`.
+    #>
+
     [CmdletBinding()]
     param
     (
-        [Parameter(Position = 0)]
-        [string]$Path = '/',
+        [Parameter(Mandatory, Position = 0)]
+        [string]$File,
 
-        [Parameter(Mandatory, ValueFromPipeline, Position = 1)]
-        [AllowEmptyString()]
-        [string[]]$InputObject
+        [string[]]$Filter,
+
+        [switch]$SkipBackup,
+
+        [string]$BackupPath = (Join-Path ([IO.Path]::GetTempPath()) "dconf.$([datetime]::UtcNow.Ticks)")
     )
 
     end
     {
-        $Path = $Path -replace '^/?', '/' -replace '(?<=[^/])$', '/'
-        $_Path = $Path
-
-        if ($MyInvocation.ExpectingInput)
+        if (-not $SkipBackup)
         {
-            $InputObject = $input
+            Export-Dconf / -OutFile $BackupPath
+            "Backed up dconf settings to $BackupPath" | Write-Verbose
         }
 
-        # Can't get past error: "Key file contains line [some_group] which is not a key-value pair, group, or comment"
-        # So we use dconf write instead of dconf load
-        $Lines = ($InputObject | Out-String).Trim() -split '\r?\n'
-        foreach ($Line in $Lines)
-        {
-            if ([string]::IsNullOrWhiteSpace($Line) -or $Line.StartsWith('#'))
-            {
-                continue
-            }
-            elseif ($Line -match '^\[(?<Path>.+)\]\s*$')
-            {
-                $__Path = $Matches.Path
-                $_Path = if ($__Path -eq '/')
-                {
-                    $Path -replace '/$'
-                }
-                elseif ($__Path -match '^/.')
-                {
-                    $__Path
-                }
-                else
-                {
-                    $Path, $__Path -join '/' -replace '/{2,}', '/'
-                }
-            }
-            else
-            {
-                $Key, $Value = $Line -split '=', 2
-                $FullKey = $_Path, $Key -join '/' -replace '/{2,}', '/'
-                dconf write $FullKey "$Value"
-                if (-not $?)
-                {
-                    Write-Error "Failed to write '$Value' to '$FullKey'"
-                }
-            }
-        }
+        $Content = Get-Content $File -ErrorAction Stop
+        $Content | Set-Dconf -Filter $Filter
     }
 }

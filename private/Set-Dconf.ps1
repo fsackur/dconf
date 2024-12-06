@@ -40,7 +40,6 @@ function Set-Dconf
         # Can't get past error: "Key file contains line [some_group] which is not a key-value pair, group, or comment"
         # So we use dconf write instead of dconf load
         $Lines = ($InputObject | Out-String).Trim() -split '\r?\n'
-        $ShouldSkip = $false
         foreach ($Line in $Lines)
         {
             if ([string]::IsNullOrWhiteSpace($Line) -or $Line.StartsWith('#'))
@@ -49,7 +48,6 @@ function Set-Dconf
             }
             elseif ($Line -match '^\[(?<Path>.+)\]\s*$')
             {
-                $ShouldSkip = $false
                 $_Path = $(
                     $MatchedPath = $Matches.Path
                     if ($MatchedPath -eq '/')
@@ -65,16 +63,10 @@ function Set-Dconf
                         $Path, $MatchedPath -join '/' -replace '/{2,}', '/'
                     }
                 )
-                continue
-            }
 
-            if (-not $ShouldSkip)
-            {
-                if ($Filter -and -not ($Filter | Where-Object {$FullKey -ilike $_}))
-                {
-                    $ShouldSkip = $true
-                    Write-Verbose "Skipping $Fullkey"
-                }
+                $ShouldSkip = $Filter -and -not ($Filter | Where-Object {$_Path -ilike "$_*"})
+                if ($ShouldSkip) {Write-Verbose "Skipping $_Path"}
+                continue
             }
 
             if ($ShouldSkip) {continue}

@@ -1,0 +1,42 @@
+name: Test
+
+on:
+  - pull_request
+  - workflow_dispatch
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: pwsh
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore dependencies
+        id: restore-dependencies
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.local/share/powershell/Modules/
+          key: pwsh-module-cache-${{ hashFiles('dconf.build.ps1') }}
+          restore-keys: pwsh-module-cache-
+
+      - name: Install dependencies
+        run: ./dconf.build.ps1 -Bootstrap
+
+      - name: Save dependencies
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.local/share/powershell/Modules/
+          key: ${{ steps.restore-dependencies.outputs.cache-primary-key }}
+
+      - name: Build
+        run: Invoke-Build Build
+
+      - name: Test
+        run: Invoke-Build Test

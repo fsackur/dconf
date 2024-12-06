@@ -3,10 +3,10 @@ function Get-DconfPath
     [CmdletBinding()]
     param
     (
-        [switch]$Refresh
+        [switch]$Flush
     )
 
-    if ($Refresh -or -not $Script:DconfPaths)
+    if ($Flush -or -not $Script:DconfPaths)
     {
         $Dump = dconf dump /
         $Script:DconfPaths = $Dump |

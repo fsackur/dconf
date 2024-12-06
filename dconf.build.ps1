@@ -235,9 +235,13 @@ task Includes BuildDir, {
     Copy-Item $Include $BuildDir
 }
 
-task BuildPowershell Version, BuildDir, Includes, {
+task BuildPowershell Clean, Version, BuildDir, Includes, {
     $Requirements = @()
     $Usings = @()
+
+    $Psm1Content = Get-Content -Raw $RootModule
+    $Psm1Header = $Psm1Content -replace '(?s)(^|\n)#region build-inlines.*'
+    $Psm1Footer = $Psm1Content -replace '(?s).*#endregion build-inlines(\n|$)'
 
     # case-insensitive matching
     $Folders = Get-ChildItem -Directory | Where-Object {$_.Name -in $PSScriptFolders}
@@ -270,10 +274,19 @@ task BuildPowershell Version, BuildDir, Includes, {
 
     $Requirements = $Requirements | Write-Output | ForEach-Object Trim | Sort-Object -Unique
     $Usings = $Usings | Write-Output | ForEach-Object Trim | Sort-Object -Unique
-    $Psm1Content = $Requirements, $Usings, "", ($Content -join "`n`n") | Write-Output
+
+    $Psm1Content = (
+        $Requirements,
+        $Usings,
+        $Psm1Header,
+        "",
+        ($Content -join "`n`n"),
+        "",
+        $Psm1Footer
+    ) | Write-Output
 
     Copy-Item $Psd1SourcePath $BuildDir
-    $Psm1Content > (Join-Path $BuildDir $RootModule)
+    $Psm1Content.Trim() > (Join-Path $BuildDir $RootModule)
 }
 
 task Build BuildPowershell

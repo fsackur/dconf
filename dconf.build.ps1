@@ -42,10 +42,10 @@ param
 )
 
 $BuildDependencies = (
-    @{ModuleName = 'InvokeBuild'; ModuleVersion = '5.11.3'},
+    @{ModuleName = 'InvokeBuild'; ModuleVersion = '5.12.1'},
     @{ModuleName = 'Pester'; ModuleVersion = '5.6.1'},
-    @{ModuleName = 'PSScriptAnalyzer'; ModuleVersion = '1.22.0'},
-    @{ModuleName = 'Microsoft.PowerShell.PSResourceGet'; ModuleVersion = '1.0.5'}
+    @{ModuleName = 'PSScriptAnalyzer'; ModuleVersion = '1.23.0'},
+    @{ModuleName = 'Microsoft.PowerShell.PSResourceGet'; ModuleVersion = '1.0.6'}
 )
 
 $InstallBuildDependencies = {

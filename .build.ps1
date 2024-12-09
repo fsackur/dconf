@@ -78,7 +78,7 @@ $SelfUpdate = {
 
         if ($WasCalledFromInvokeBuild)
         {
-            git commit -m "updated build script" $BuildScript
+            git commit -m "update build script" $BuildScript
             assert ($?)
         }
     }
@@ -447,7 +447,7 @@ task GithubRelease Tag, Push, Package, Zip, {
     gh release create $Tag --notes $Tag $ZipFile $PackageFile
 }
 
-task Publish GithubRelease, {
+task PSGallery BuildDir, {
     if (-not $PSGalleryApiKey)
     {
         if (Get-Command rbw -ErrorAction Ignore)  # TODO: sort out SecretManagement wrapper
@@ -463,6 +463,8 @@ task Publish GithubRelease, {
     Get-ChildItem -File $OutputFolder -Filter *.nupkg | Remove-Item  # PSResourceGet insists on recreating nupkg
     Publish-PSResource -Path $BuildDir -DestinationPath $OutputFolder -Repository PSGallery -ApiKey $PSGalleryApiKey
 }
+
+task Publish GithubRelease, PSGallery
 
 # Default task
 task . Clean, Build, Test

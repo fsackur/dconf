@@ -1,0 +1,20 @@
+name: Release label
+
+on:
+  pull_request:
+    types: [labeled, unlabeled, opened, reopened]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: pwsh
+
+jobs:
+  pr-label:
+    if: ${{ ! github.event.pull_request.merged }}
+    uses: fsackur/ci/.github/workflows/pr-label.yml@main
+    with:
+      label_json: ${{ toJson(github.event.pull_request.labels.*.name) }}

@@ -1,0 +1,18 @@
+name: Test
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: pwsh
+
+jobs:
+  test:
+    if: ${{ ! github.event.pull_request.merged }}
+    uses: fsackur/ci/.github/workflows/test-powershell.yml@main

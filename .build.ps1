@@ -284,18 +284,19 @@ task Tag ParseManifest, {
 
 task Push {
     $RemoteBranch = git rev-parse --abbrev-ref --symbolic-full-name "@{upstream}"
-    git fetch ($RemoteBranch -replace '/.*')
+    $Output = git fetch ($RemoteBranch -replace '/.*') *>&1
+    assert $? ($Output | Out-String)
 
     $MergeBase = git merge-base HEAD $RemoteBranch
     $RemoteHead = git rev-parse $RemoteBranch
     assert ($RemoteHead -eq $MergeBase) "Remote branch is ahead"
 
     # Force-push to bypass branch protection
-    git push -f
-    assert($?)
+    $Output = git push -f *>&1
+    assert $? ($Output | Out-String)
 
-    git push --tags
-    assert($?)
+    $Output = git push --tags *>&1
+    assert $? ($Output | Out-String)
 }
 
 task BuildDir ParseManifest, {

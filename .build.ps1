@@ -291,8 +291,7 @@ task Push {
     $RemoteHead = git rev-parse $RemoteBranch
     assert ($RemoteHead -eq $MergeBase) "Remote branch is ahead"
 
-    # Force-push to bypass branch protection
-    $Output = git push -f *>&1
+    $Output = git push *>&1
     assert $? ($Output | Out-String)
 
     $Output = git push --tags *>&1

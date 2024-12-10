@@ -1,4 +1,4 @@
-name: Publish
+name: Release
 
 on:
   pull_request:
@@ -23,7 +23,7 @@ defaults:
     shell: pwsh
 
 jobs:
-  publish:
+  release:
     if: ${{
           github.event.workflow || (
             github.event.pull_request.merged &&
@@ -31,7 +31,7 @@ jobs:
               contains(github.event.pull_request.labels.*.name, 'release-major') ||
               contains(github.event.pull_request.labels.*.name, 'release-minor') ||
               contains(github.event.pull_request.labels.*.name, 'release-patch') ) ) }}
-    uses: fsackur/ci/.github/workflows/publish-powershell.yml@main
+    uses: fsackur/ci/.github/workflows/release-powershell.yml@main
     with:
       event_json: ${{ toJson(github.event) }}
     secrets: inherit

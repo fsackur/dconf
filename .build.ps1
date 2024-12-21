@@ -78,8 +78,8 @@ $SelfUpdate = {
 
         if ($WasCalledFromInvokeBuild)
         {
-            git commit -m "update build script" $BuildScript
-            assert ($?)
+            $Output = git commit -m "update build script" $BuildScript *>&1
+            assert $? ($Output | Out-String)
         }
     }
     else
@@ -167,9 +167,21 @@ if ($Bootstrap)
 
 task InstallBuildDependencies $InstallBuildDependencies
 
+$AssertTool = {
+    [string]$Tool = $BuildTask -replace '^Assert'
+    assert (Get-Command $Tool.ToLower()) "$Tool not found"
+}
+task AssertGit $AssertTool
+task AssertZip $AssertTool
+task AssertGH $AssertTool
+
 task SelfUpdate $SelfUpdate
 
-task ParseManifest {
+task Clean {
+    remove $OutputFolder
+}
+
+task ReadManifest {
     $Script:Psd1SourcePath = Join-Path $BuildRoot "$ModuleName.psd1"
 
     $ManifestAst = [Parser]::ParseFile($Psd1SourcePath, [ref]$null, [ref]$null)
@@ -184,65 +196,42 @@ task ParseManifest {
     $Script:Version = $ManifestVersion
     $Script:Tag = "v$ManifestVersion"
 
-    assert($RootModule)
-    assert($ManifestVersion)
+    assert $RootModule "RootModule not set in manifest"
+    assert $ManifestVersion "ModuleVersion not set in manifest"
+
+    Write-Build Green "Manifest version: $ManifestVersion"
 }
 
-task AppveyorMetadata ParseManifest, {
-    $BuildVersion = $env:APPVEYOR_BUILD_VERSION
-    assert ($BuildVersion)
-    $Script:IsAppveyorTagBuild = $env:APPVEYOR_REPO_TAG -eq 'true'
-    if ($IsAppveyorTagBuild)
-    {
-        Write-Build -Color Green "Building tag: $env:APPVEYOR_REPO_TAG_NAME"
-        [version]$Version = $env:APPVEYOR_REPO_TAG_NAME -replace '^\D*' -replace '[^\.\d].*$'
-        assert ($Version -eq $ManifestVersion)
-        [int]$Build = $env:APPVEYOR_BUILD_NUMBER
-        $BuildVersion = $Version, ++$Build -join '-'
-        Update-AppveyorBuild -Version $BuildVersion
-    }
-}
+task UpdateVersion ReadManifest, {
+    $n, $v = $NewVersion, $ManifestVersion
 
-task AppveyorAbortWhenHeadAlreadyTagged AppveyorMetadata, {
-    if (-not $IsAppveyorTagBuild)
-    {
-        $Refs = (git for-each-ref --points-at HEAD) -replace '.* '
-        $TagRefs = @($Refs) -match '^refs/tags/'
-        if ($TagRefs)
-        {
-            "Commit $(git rev-parse HEAD) is already tagged in $TagRefs" | Write-Build -Color Yellow
-            appveyor exit
-        }
-    }
-}
-
-task Clean {
-    remove $OutputFolder
-}
-
-task UpdateVersion ParseManifest, {
     $Script:Version = if ($NewVersion)
     {
+        $IncOk = (
+            ($n.Major -eq ($v.Major + 1) -and $n.Minor -eq 0 -and $n.Build -eq 0) -or
+            ($n.Major -eq $v.Major -and $n.Minor -eq ($v.Minor + 1) -and $n.Build -eq 0) -or
+            ($n.Major -eq $v.Major -and $n.Minor -eq $v.Minor -and $n.Build -eq ($v.Build + 1))
+        )
+        assert $IncOk "New version is not a valid major/minor/patch increment. Existing: $ManifestVersion. New: $NewVersion"
+
         $NewVersion
     }
     elseif ($Release -eq "major")
     {
-        [version]::new(($ManifestVersion.Major + 1), 0, 0)
+        [version]::new(($v.Major + 1), 0, 0)
     }
     elseif ($Release -eq "minor")
     {
-        [version]::new($ManifestVersion.Major, ($ManifestVersion.Minor + 1), 0)
+        [version]::new($v.Major, ($v.Minor + 1), 0)
     }
     elseif ($Release -eq "patch")
     {
-        [version]::new($ManifestVersion.Major, $ManifestVersion.Minor, ($ManifestVersion.Build + 1))
+        [version]::new($v.Major, $v.Minor, ($v.Build + 1))
     }
     else
     {
-        $ManifestVersion
+        $v
     }
-
-    assert($Version -ge $ManifestVersion)
 
     $Script:Tag = "v$Version"
 
@@ -253,52 +242,16 @@ task UpdateVersion ParseManifest, {
             $ManifestContent.Substring($ManifestVersionAst.Extent.EndOffset)
         ) -join "'$Version'"
         $ManifestContent > $Psd1SourcePath
-    }
-}
 
-task Tag ParseManifest, {
-    if (git diff -- $Psd1SourcePath)
+        Write-Build Green "New manifest version: $Version"
+    }
+    else
     {
-        git add $Psd1SourcePath
-        assert($?)
-        git commit -m $Tag
-        assert($?)
-    }
-
-    $Output = git tag $Tag --no-sign *>&1 | Out-String | ForEach-Object Trim
-    if (-not $?)
-    {
-        if ($Output -match 'already exists')
-        {
-            # If tag points to head, we don't care
-            $Refs = (git show-ref $Tag --head) -replace ' .*'
-            assert($Refs[0] -eq $Refs[1]) "Tag already exists and points to $($Refs[1] -replace '(?<=^.{7}).*')"
-        }
-        else
-        {
-            Write-Build Red $Output
-            assert $false
-        }
+        Write-Build Green "Manifest version unchanged."
     }
 }
 
-task Push {
-    $RemoteBranch = git rev-parse --abbrev-ref --symbolic-full-name "@{upstream}"
-    $Output = git fetch ($RemoteBranch -replace '/.*') *>&1
-    assert $? ($Output | Out-String)
-
-    $MergeBase = git merge-base HEAD $RemoteBranch
-    $RemoteHead = git rev-parse $RemoteBranch
-    assert ($RemoteHead -eq $MergeBase) "Remote branch is ahead"
-
-    $Output = git push *>&1
-    assert $? ($Output | Out-String)
-
-    $Output = git push --tags *>&1
-    assert $? ($Output | Out-String)
-}
-
-task BuildDir ParseManifest, {
+task BuildDir ReadManifest, {
     $Script:BuildDir = [IO.Path]::Combine($PSScriptRoot, $OutputFolder, $ModuleName, $Version)
     $Script:BuiltManifest = Join-Path $BuildDir "$ModuleName.psd1"
     $Script:BuiltRootModule = Join-Path $BuildDir $RootModule
@@ -394,6 +347,57 @@ task UnitTest ImportBuiltModule, {
 
 task Test Lint, UnitTest
 
+task Fetch AssertGit, {
+    $Script:RemoteBranch = git rev-parse --abbrev-ref --symbolic-full-name "@{upstream}"
+    $Output = git fetch ($RemoteBranch -replace '/.*') *>&1
+    assert $? ($Output | Out-String)
+}
+
+task Tag ReadManifest, Fetch, {
+    if (git diff -- $Psd1SourcePath)
+    {
+        $VersionChange = (git diff HEAD~1..HEAD) -match '^\+\s*ModuleVersion\s*=' -replace '^\+\s*'
+        assert (-not $VersionChange) (
+            "The last commit changed the module version: $VersionChange. " +
+            "It's probably an error to increment the version in consecutive commits."
+        )
+
+        $Output = git add $Psd1SourcePath *>&1
+        assert $? ($Output | Out-String)
+
+        $Output = git commit -m $Tag *>&1
+        assert $? ($Output | Out-String)
+    }
+
+    $Output = git tag $Tag -m $Tag *>&1
+    if (-not $?)
+    {
+        if ($Output -match 'already exists')
+        {
+            # If tag points to head, we don't care
+            $Refs = (git show-ref $Tag --head) -replace ' .*'
+            assert ($Refs[0] -eq $Refs[1]) "Tag already exists and points to $($Refs[1] -replace '(?<=^.{7}).*')"
+        }
+        else
+        {
+            Write-Build Red $Output
+            assert $false
+        }
+    }
+}
+
+task Push Fetch, {
+    $MergeBase = git merge-base HEAD $RemoteBranch
+    $RemoteHead = git rev-parse $RemoteBranch
+    assert ($RemoteHead -eq $MergeBase) "Remote branch is ahead"
+
+    $Output = git push *>&1
+    assert $? ($Output | Out-String)
+
+    $Output = git push --tags *>&1
+    assert $? ($Output | Out-String)
+}
+
 task Package Build, {
     Get-ChildItem $OutputFolder -File -Filter *.nupkg | Remove-Item  # PSResourceGet insists on recreating nupkg
 
@@ -415,7 +419,7 @@ task Package Build, {
     $Script:PackageFile = Join-Path $OutputFolder $PackageName
 }
 
-task Zip Build, {
+task Zip AssertZip, Build, {
     $ZipName = "$ModuleName.$Version.zip"
 
     if ($IsLinux)
@@ -423,8 +427,8 @@ task Zip Build, {
         Push-Location $OutputFolder -ErrorAction Stop
         try
         {
-            zip -or $ZipName $ModuleName
-            assert($?)
+            $Output = zip -or $ZipName $ModuleName *>&1
+            assert $? ($Output | Out-String)
         }
         finally
         {
@@ -439,21 +443,15 @@ task Zip Build, {
     $Script:ZipFile = Join-Path $OutputFolder $ZipName
 }
 
-task GithubRelease Tag, Push, Package, Zip, {
-    $Output = gh release view $Tag *>&1 | Out-String | ForEach-Object Trim
+task GithubRelease AssertGh, Tag, Push, Package, Zip, {
+    $Output = gh release view $Tag *>&1
     if ($Output -ne "release not found")
     {
-        if ($?)
-        {
-            assert $false "A release exists already for $Tag"
-        }
-        else
-        {
-            Write-Build Red $Output
-            assert $false
-        }
+        $Message = if ($?) {"A release exists already for $Tag"} else {$Output | Out-String}
+        assert $false $Message
     }
-    gh release create $Tag --notes $Tag $ZipFile $PackageFile
+    $Output = gh release create $Tag --notes $Tag $ZipFile $PackageFile *>&1
+    assert $false ($Output | Out-String)
 }
 
 task PSGallery BuildDir, {
@@ -463,11 +461,8 @@ task PSGallery BuildDir, {
         {
             $PSGalleryApiKey = rbw get PSGallery
         }
-        else
-        {
-            throw 'PSGalleryApiKey is required'
-        }
     }
+    assert $PSGalleryApiKey "PSGallery API key required"
 
     Get-ChildItem -File $OutputFolder -Filter *.nupkg | Remove-Item  # PSResourceGet insists on recreating nupkg
     Publish-PSResource -Path $BuildDir -DestinationPath $OutputFolder -Repository PSGallery -ApiKey $PSGalleryApiKey

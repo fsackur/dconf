@@ -7,6 +7,8 @@ using System.Linq;
 using System.Diagnostics;
 using System.Management.Automation;
 using System.Management.Automation.Provider;
+using System.Text.RegularExpressions;
+using System.ComponentModel;
 
 namespace Dconf
 {
@@ -24,6 +26,64 @@ namespace Dconf
     [CmdletProvider("Dconf", ProviderCapabilities.None)]
     public class DconfProvider : NavigationCmdletProvider
     {
+        /// <remarks>
+        /// If we have schemas `org.gnome.mutter` and `org.gnome.shell`, that does not
+        /// make `org.gnome` a valid schema. But we still wish to navigate through it.
+        /// This is a tree to enable navigation through partial segments of schemas.
+        /// </remarks>
+        internal class SchemaPath
+        {
+            Dictionary<string, SchemaPath> children = new();
+
+            // Whether this node is a valid schema
+            internal bool isSchema;
+
+            internal string basePath;
+
+            private SchemaPath(string basePath) => this.basePath = basePath;
+
+            internal static SchemaPath Build(string[] paths, string basePath = "")
+            {
+                var node = new SchemaPath(basePath);
+                var groups = paths
+                    .Select(p => p.Split('.', 2))
+                    .GroupBy(
+                        arr => arr[0],
+                        arr => arr.Length > 1 ? arr[1] : null
+                    );
+
+                foreach (var group in groups)
+                {
+                    var newBasePath = string.Join(basePath, group.Key);
+                    var childPaths = group.Where(p => p is not null).ToArray();
+                    var child = Build(childPaths!, newBasePath);
+                    child.isSchema = childPaths.Length < group.Count();
+                    node.children[group.Key] = child;
+                }
+                return node;
+            }
+
+            internal SchemaPath? Get(string childName)
+            {
+                SchemaPath? sp;
+                if (children.TryGetValue(childName, out sp))
+                {
+                    return sp;
+                }
+                return null;
+            }
+
+            internal IEnumerable<SchemaPath> List() => children.Values.ToList();
+        }
+
+        internal record DecomposedPath
+        {
+            public required IEnumerable<string> container;
+            public required SchemaPath? schemaPath;
+            public required IEnumerable<string> leaf;
+        }
+
+
         protected override PSDriveInfo NewDrive(PSDriveInfo drive)
         {
             return new DriveInfo(drive);
@@ -92,6 +152,8 @@ namespace Dconf
 
         protected static string[] ToChunks(string path) => Trim(path).Split('/');
 
+        protected static string GetBase(string path) => string.Join('.', ToChunks(path)[0..^2]);
+
         private string[]? schemas = null;
 
         protected string[] Schemas {
@@ -102,6 +164,41 @@ namespace Dconf
             }
         }
 
+        private SchemaPath? schemaPaths = null;
+
+        private SchemaPath SchemaPaths
+        {
+            get
+            {
+                schemaPaths ??= SchemaPath.Build(Schemas);
+                return schemaPaths;
+            }
+        }
+
+        private DecomposedPath DecomposePath(string path)
+        {
+            var leafChunks = ToChunks(path);
+            List<string> containerChunks = new();
+            SchemaPath? sp = SchemaPaths;
+
+            while (leafChunks.Length > 0)
+            {
+                sp = sp.Get(leafChunks[0]);
+                if (sp == null)
+                    break;
+                containerChunks.Add(leafChunks[0]);
+                leafChunks = leafChunks[1..^1];
+            }
+            return new DecomposedPath()
+            {
+                container = containerChunks,
+                schemaPath = sp,
+                leaf = leafChunks,
+            };
+        }
+
+        private string[] GetSchemaKeys(string path) => InvokeGsettings(["list-keys", path]);
+
         protected override bool IsValidPath(string path)
         {
             return true;
@@ -109,29 +206,21 @@ namespace Dconf
 
         protected override bool ItemExists(string path)
         {
-            path = ToGsettingsPath(path);
-            if (Schemas.Contains(path))
-            {
-                return true;
-            }
-            var chunks = ToChunks(path);
-            path = string.Join('.', chunks.SkipLast(1));
-            if (Schemas.Contains(path))
-            {
-                return InvokeGsettings(["list-keys"]).Contains(chunks[^1]);
-            }
-            return false;
+            WriteDebug($"ItemExists {path}");
+            var decomposed = DecomposePath(path);
+            return decomposed.leaf.Count() <= 1;
         }
 
         protected override bool IsItemContainer(string path)
         {
-            path = ToGsettingsPath(path);
-            return Schemas.Contains(path);
+            WriteDebug($"IsItemContainer {path}");
+            var decomposed = DecomposePath(path);
+            return decomposed.leaf.Count() == 0;
         }
 
         protected override void GetItem(string path)
         {
-            WriteDebug(path);
+            WriteDebug($"GetItem {path}");
             string command;
             bool isContainer;
             (command, isContainer) = path.EndsWith("/") ? ("dump", true) : ("read", false);
@@ -146,6 +235,7 @@ namespace Dconf
 
         protected override void GetChildNames(string path, ReturnContainers returnContainers)
         {
+            WriteDebug($"GetChildNames {path}");
             if (!path.EndsWith("/"))
             {
                 path = $"{path}/";
@@ -155,7 +245,49 @@ namespace Dconf
 
         protected override void GetChildItems(string path, bool recurse)
         {
+            WriteDebug($"GetChildItems {path}");
 
+            var decomposed = DecomposePath(path);
+            if (decomposed.schemaPath == null)
+            {
+                if (decomposed.leaf.Count() > 1)
+                {
+                    WriteError(new ErrorRecord(
+                        new ItemNotFoundException($"Cannot find path '{path}' because it does not exist."),
+                        "PathNotFound",
+                        ErrorCategory.ObjectNotFound,
+                        path)
+                    );
+                }
+                else
+                {
+                    WriteItemObject(path, path, false);
+                }
+                return;
+            }
+
+            var sp = decomposed.schemaPath;
+            var children = sp.List();
+            foreach (var child in children)
+            {
+                WriteItemObject(child.basePath, child.basePath, true);
+            }
+
+            if (sp.isSchema)
+            {
+                foreach (var key in GetSchemaKeys(path))
+                {
+                    WriteItemObject($"{path}/{key}", $"{path}/{key}", false);
+                }
+            }
+
+            if (recurse)
+            {
+                foreach (var child in children)
+                {
+                    GetChildItems(child.basePath, recurse);
+                }
+            }
         }
 
         // protected override void NewItem(string path, string type, object newItemValue)

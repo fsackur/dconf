@@ -24,7 +24,7 @@ namespace Dconf
     }
 
     [CmdletProvider("Dconf", ProviderCapabilities.None)]
-    public class DconfProvider : NavigationCmdletProvider
+    public partial class DconfProvider : NavigationCmdletProvider
     {
         /// <remarks>
         /// If we have schemas `org.gnome.mutter` and `org.gnome.shell`, that does not
@@ -81,29 +81,6 @@ namespace Dconf
             public required IEnumerable<string> container;
             public required SchemaPath? schemaPath;
             public required IEnumerable<string> leaf;
-        }
-
-
-        protected override PSDriveInfo NewDrive(PSDriveInfo drive)
-        {
-            return new DriveInfo(drive);
-        }
-
-        protected override PSDriveInfo RemoveDrive(PSDriveInfo drive)
-        {
-            if (drive == null)
-            {
-                WriteError(new ErrorRecord(
-                    new ArgumentNullException("drive"),
-                    "NullDrive",
-                    ErrorCategory.InvalidArgument,
-                    drive)
-                );
-            }
-            var dconfDrive = drive as DriveInfo;
-#pragma warning disable CS8603 // Possible null reference return.
-            return dconfDrive;
-#pragma warning restore CS8603 // Possible null reference return.
         }
 
         private string[] Invoke(DconfBinary binary, string[] args)
@@ -199,128 +176,27 @@ namespace Dconf
 
         private string[] GetSchemaKeys(string path) => InvokeGsettings(["list-keys", path]);
 
-        protected override bool IsValidPath(string path)
+
+        protected override PSDriveInfo NewDrive(PSDriveInfo drive)
         {
-            return true;
+            return new DriveInfo(drive);
         }
 
-        protected override bool ItemExists(string path)
+        protected override PSDriveInfo RemoveDrive(PSDriveInfo drive)
         {
-            WriteDebug($"ItemExists {path}");
-            var decomposed = DecomposePath(path);
-            return decomposed.leaf.Count() <= 1;
-        }
-
-        protected override bool IsItemContainer(string path)
-        {
-            WriteDebug($"IsItemContainer {path}");
-            var decomposed = DecomposePath(path);
-            return decomposed.leaf.Count() == 0;
-        }
-
-        protected override void GetItem(string path)
-        {
-            WriteDebug($"GetItem {path}");
-            string command;
-            bool isContainer;
-            (command, isContainer) = path.EndsWith("/") ? ("dump", true) : ("read", false);
-
-            WriteItemObject(InvokeDconf([command, path]), path, isContainer);
-        }
-
-        // protected override bool HasChildItems( string path )
-        // {
-        //     return false;
-        // }
-
-        protected override void GetChildNames(string path, ReturnContainers returnContainers)
-        {
-            WriteDebug($"GetChildNames {path}");
-            if (!path.EndsWith("/"))
+            if (drive == null)
             {
-                path = $"{path}/";
+                WriteError(new ErrorRecord(
+                    new ArgumentNullException("drive"),
+                    "NullDrive",
+                    ErrorCategory.InvalidArgument,
+                    drive)
+                );
             }
-            List(path);
+            var dconfDrive = drive as DriveInfo;
+#pragma warning disable CS8603 // Possible null reference return.
+            return dconfDrive;
+#pragma warning restore CS8603 // Possible null reference return.
         }
-
-        protected override void GetChildItems(string path, bool recurse)
-        {
-            WriteDebug($"GetChildItems {path}");
-
-            var decomposed = DecomposePath(path);
-            if (decomposed.schemaPath == null)
-            {
-                if (decomposed.leaf.Count() > 1)
-                {
-                    WriteError(new ErrorRecord(
-                        new ItemNotFoundException($"Cannot find path '{path}' because it does not exist."),
-                        "PathNotFound",
-                        ErrorCategory.ObjectNotFound,
-                        path)
-                    );
-                }
-                else
-                {
-                    WriteItemObject(path, path, false);
-                }
-                return;
-            }
-
-            var sp = decomposed.schemaPath;
-            var children = sp.List();
-            foreach (var child in children)
-            {
-                WriteItemObject(child.basePath, child.basePath, true);
-            }
-
-            if (sp.isSchema)
-            {
-                foreach (var key in GetSchemaKeys(path))
-                {
-                    WriteItemObject($"{path}/{key}", $"{path}/{key}", false);
-                }
-            }
-
-            if (recurse)
-            {
-                foreach (var child in children)
-                {
-                    GetChildItems(child.basePath, recurse);
-                }
-            }
-        }
-
-        // protected override void NewItem(string path, string type, object newItemValue)
-        // {
-        // }
-
-        // protected override bool IsItemContainer(string path)
-        // {}
-        // {
-        //     if (PathIsDrive(path))
-        //     {
-        //         return true;
-        //     }
-
-        //     string[] pathChunks = ChunkPath(path);
-        //     string tableName;
-        //     int rowNumber;
-
-        //     PathType type = GetNamesFromPath(path, out tableName, out rowNumber);
-
-        //     if (type == PathType.Table)
-        //     {
-        //         foreach (DatabaseTableInfo ti in GetTables())
-        //         {
-        //             if (string.Equals(ti.Name, tableName, StringComparison.OrdinalIgnoreCase))
-        //             {
-        //                 return true;
-        //             }
-        //         } // foreach (DatabaseTableInfo...
-        //     } // if (pathChunks...
-
-        //     return false;
-        // } // IsItemContainer
-
     }
 }

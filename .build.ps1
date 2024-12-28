@@ -44,6 +44,12 @@ param
 
     [string[]]$PSScriptFolders = ('Classes', 'Private', 'Public'),
 
+    [string[]]$DotnetProjects,
+
+    [string[]]$TestPath,
+
+    [hashtable]$PesterConfiguration = @{},
+
     [string]$OutputFolder = 'Build',
 
     [switch]$CI = ($env:CI -and $env:CI -ne "0"),
@@ -279,65 +285,87 @@ task BuildDir ReadManifest, {
     New-Item $BuildDir -ItemType Directory -Force | Out-Null
 }
 
-task Includes BuildDir, {
-    Copy-Item $Include $BuildDir
+task Includes @{
+    Inputs = {$Include | Get-ChildItem -ErrorAction Ignore}
+    Outputs = {$Include | Get-ChildItem -ErrorAction Ignore | ForEach-Object {"$BuildDir/$($_.Name)"}}
+    Jobs = "BuildDir", {Copy-Item $Include $BuildDir}
 }
 
-task BuildPowershell Clean, UpdateVersion, BuildDir, Includes, {
-    $Requirements = @()
-    $Usings = @()
+task BuildPowershell @{
+    Inputs = {(
+        ($PSScriptFolders | ForEach-Object {"$_/*.ps1"} | Get-ChildItem -ErrorAction Ignore),
+        $Psd1SourcePath,
+        $RootModule
+    ) | Write-Output}
+    Outputs = {$BuiltManifest, $BuiltRootModule}
+    Jobs = "UpdateVersion", "BuildDir", {
+        $Requirements = @()
+        $Usings = @()
 
-    $Psm1Content = Get-Content -Raw $RootModule
-    $Psm1Header = $Psm1Content -replace '(?s)(^|\n)#region build-inlines.*'
-    $Psm1Footer = $Psm1Content -replace '(?s).*#endregion build-inlines(\n|$)'
+        $Psm1Content = Get-Content -Raw $RootModule
+        $Psm1Header = $Psm1Content -replace '(?s)(^|\n)#region build-inlines.*'
+        $Psm1Footer = $Psm1Content -replace '(?s).*#endregion build-inlines(\n|$)'
 
-    # case-insensitive matching
-    $Folders = Get-ChildItem -Directory | Where-Object {$_.Name -in $PSScriptFolders}
+        # case-insensitive matching
+        $Folders = Get-ChildItem -Directory | Where-Object {$_.Name -in $PSScriptFolders}
 
-    $Content = $Folders | ForEach-Object {
-        $Label = ($_ | Resolve-Path -Relative) -replace '^\.[\\/]'
-        $Files = $_ | Get-ChildItem -File -Recurse -Filter *.ps1
+        $Content = $Folders | ForEach-Object {
+            $Label = ($_ | Resolve-Path -Relative) -replace '^\.[\\/]'
+            $Files = $_ | Get-ChildItem -File -Recurse -Filter *.ps1
 
-        $FileContents = $Files | ForEach-Object {
-            $FileAst = [Parser]::ParseFile($_, [ref]$null, [ref]$null)
-            $_Content = $FileAst.Extent.Text
+            $FileContents = $Files | ForEach-Object {
+                $FileAst = [Parser]::ParseFile($_, [ref]$null, [ref]$null)
+                $_Content = $FileAst.Extent.Text
 
-            $Requirements += $FileAst.ScriptRequirements.Extent.Text
-            $Usings += $FileAst.UsingStatements.Extent.Text
+                $Requirements += $FileAst.ScriptRequirements.Extent.Text
+                $Usings += $FileAst.UsingStatements.Extent.Text
 
-            # find furthest offset from start
-            [int]$SnipOffset = (
-                $FileAst.ScriptRequirements.Extent.EndOffset,
-                $FileAst.UsingStatements.Extent.EndOffset,
-                $FileAst.ParamBlock.Extent.EndOffset  # will only exist to hold PSSA suppressions
-            ) |
-                Sort-Object |
-                Select-Object -Last 1
+                # find furthest offset from start
+                [int]$SnipOffset = (
+                    $FileAst.ScriptRequirements.Extent.EndOffset,
+                    $FileAst.UsingStatements.Extent.EndOffset,
+                    $FileAst.ParamBlock.Extent.EndOffset  # will only exist to hold PSSA suppressions
+                ) |
+                    Sort-Object |
+                    Select-Object -Last 1
 
-            $_Content.Substring($SnipOffset).Trim()
+                $_Content.Substring($SnipOffset).Trim()
+            }
+
+            "#region $Label", ($FileContents -join "`n`n"), "#endregion $Label" | Write-Output
         }
 
-        "#region $Label", ($FileContents -join "`n`n"), "#endregion $Label" | Write-Output
+        $Requirements = $Requirements | Write-Output | ForEach-Object Trim | Sort-Object -Unique
+        $Usings = $Usings | Write-Output | ForEach-Object Trim | Sort-Object -Unique
+
+        $Psm1Content = (
+            $Requirements,
+            $Usings,
+            $Psm1Header,
+            "",
+            ($Content -join "`n`n"),
+            "",
+            $Psm1Footer
+        ) | Write-Output
+
+        Copy-Item $Psd1SourcePath $BuildDir
+        $Psm1Content.Trim() > (Join-Path $BuildDir $RootModule)
     }
-
-    $Requirements = $Requirements | Write-Output | ForEach-Object Trim | Sort-Object -Unique
-    $Usings = $Usings | Write-Output | ForEach-Object Trim | Sort-Object -Unique
-
-    $Psm1Content = (
-        $Requirements,
-        $Usings,
-        $Psm1Header,
-        "",
-        ($Content -join "`n`n"),
-        "",
-        $Psm1Footer
-    ) | Write-Output
-
-    Copy-Item $Psd1SourcePath $BuildDir
-    $Psm1Content.Trim() > (Join-Path $BuildDir $RootModule)
 }
 
-task Build BuildPowershell
+task BuildDotnet @{
+    Inputs = {$DotnetProjects | ForEach-Object {"$_/*.cs", "$_/*.csproj"} | Get-ChildItem -ErrorAction Ignore}
+    Outputs = {$DotnetProjects | ForEach-Object {"$BuildDir/$_.dll"}}
+    Jobs = "BuildDir", {
+        if (-not $DotnetProjects) {return}
+
+        $DotnetProjects | ForEach-Object {
+            exec {dotnet build $_ --output $BuildDir}
+        }
+    }
+}
+
+task Build Includes, BuildDotnet, BuildPowershell
 
 task Lint {
     $Files = $Include, $PSScriptFolders |
@@ -357,13 +385,38 @@ task Lint {
     }
 }
 
-task ImportBuiltModule BuildDir, {
-    Remove-Module $ModuleName -ea Ignore
-    Import-Module -Global $BuiltManifest -ea Stop
-}
+task UnitTest Build, {
+    [bool]$UseNewProcess = $DotnetProjects
 
-task UnitTest ImportBuiltModule, {
-    Invoke-Pester ./tests/
+    $Run = $PesterConfiguration.Run
+    if ($null -eq $Run)
+    {
+        $Run = $PesterConfiguration.Run = @{}
+    }
+
+    if ($TestPath)
+    {
+        $Run.Path = $TestPath
+    }
+
+    if ($UseNewProcess)
+    {
+        $Run.Exit = $true
+        $PesterConfigJson = $PesterConfiguration | ConvertTo-Json -Depth 10 -Compress
+
+        $PSPath = (Get-Process -Id $PID).Path
+        $Command = $ExecutionContext.InvokeCommand.ExpandString({
+            Import-Module -Global $BuiltManifest -ea Stop
+            Invoke-Pester -Configuration ('$PesterConfigJson' | ConvertFrom-Json)
+        })
+        exec { & $PSPath -NoLogo -NoProfile -Command $Command}
+    }
+    else
+    {
+        Remove-Module $ModuleName -ea Ignore
+        Import-Module -Global $BuiltManifest -ea Stop
+        Invoke-Pester -Configuration $PesterConfiguration
+    }
 }
 
 task Test Lint, UnitTest

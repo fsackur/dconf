@@ -1,0 +1,3 @@
+@{
+    DotnetProjects = @('provider')
+}

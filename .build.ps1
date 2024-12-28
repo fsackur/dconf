@@ -194,13 +194,10 @@ if ($Bootstrap)
 
 task InstallBuildDependencies $InstallBuildDependencies
 
-$AssertTool = {
-    [string]$Tool = $BuildTask -replace '^Assert'
-    assert (Get-Command $Tool.ToLower()) "$Tool not found"
-}
-task AssertGit $AssertTool
-task AssertZip $AssertTool
-task AssertGH $AssertTool
+$AssertTool = {assert (Get-Command $Tool.ToLower() -ErrorAction Ignore) "$Tool not found"}
+task AssertGit {$Tool = "git"; & $AssertTool}
+task AssertZip {$Tool = "zip"; & $AssertTool}
+task AssertGH {$Tool = "gh"; & $AssertTool}
 
 task SelfUpdate $SelfUpdate
 

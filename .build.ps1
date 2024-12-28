@@ -46,18 +46,42 @@ param
 
     [string]$OutputFolder = 'Build',
 
-    [switch]$CI = ($env:CI -and $env:CI -ne "0")
+    [switch]$CI = ($env:CI -and $env:CI -ne "0"),
+
+    [Microsoft.PowerShell.Commands.ModuleSpecification[]]$BuildDependencies = (
+        @{ModuleName = 'InvokeBuild'; ModuleVersion = '5.12.1'},
+        @{ModuleName = 'Pester'; ModuleVersion = '5.6.1'},
+        @{ModuleName = 'PSScriptAnalyzer'; ModuleVersion = '1.23.0'},
+        @{ModuleName = 'Microsoft.PowerShell.PSResourceGet'; ModuleVersion = '1.0.6'}
+    )
 )
 
+#region Setup
 $BuildScript = $MyInvocation.MyCommand.Source | Split-Path -Leaf
+$ParameterFile = $MyInvocation.MyCommand.Source -replace '\.ps1$', '.parameters.psd1'
+$WasCalledFromInvokeBuild = (Get-PSCallStack).Command -match 'Invoke-Build'
 
-$BuildDependencies = (
-    @{ModuleName = 'InvokeBuild'; ModuleVersion = '5.12.1'},
-    @{ModuleName = 'Pester'; ModuleVersion = '5.6.1'},
-    @{ModuleName = 'PSScriptAnalyzer'; ModuleVersion = '1.23.0'},
-    @{ModuleName = 'Microsoft.PowerShell.PSResourceGet'; ModuleVersion = '1.0.6'}
-)
+if ($WasCalledFromInvokeBuild -and (Test-Path $ParameterFile))
+{
+    $DefaultParameterValues = Invoke-Expression "DATA {$(Get-Content -Raw $ParameterFile)}"
 
+    $BoundParameters = Get-PSCallStack |
+        Where-Object Command -eq "Invoke-Build.ps1" |
+        Select-Object -Last 1 -ExpandProperty InvocationInfo |
+        Select-Object -ExpandProperty BoundParameters
+    $null = $BoundParameters.Remove("Task")
+
+    $DefaultParameterValues, $BoundParameters |
+        ForEach-Object {
+            $_.GetEnumerator() |
+                ForEach-Object {
+                    Set-Variable -Scope Script -Name $_.Key -Value $_.Value
+                }
+        }
+}
+#endregion Setup
+
+#region Handle direct invocation (i.e. not Invoke-Build)
 $SelfUpdate = {
     $SourceRepo = "fsackur/ci"
     $SourceUri = "https://raw.githubusercontent.com/$SourceRepo/refs/heads/main/$BuildScript"
@@ -89,7 +113,7 @@ $SelfUpdate = {
 }
 
 $InstallBuildDependencies = {
-    $IsInteractive = [Environment]::UserInteractive -or [Environment]::GetCommandLineArgs().Where({$_.ToLower().StartsWith('-noni')})
+    $IsInteractive = [Environment]::UserInteractive -or -not [Environment]::GetCommandLineArgs().Where({$_.ToLower().StartsWith('-noni')})
     $ShouldConfirm = $IsInteractive -and -not $CI
 
     $BuildDependencies |
@@ -97,7 +121,6 @@ $InstallBuildDependencies = {
         Install-BuildDependencies -Confirm:$ShouldConfirm
 }
 
-#region Handle direct invocation (i.e. not Invoke-Build)
 function Install-BuildDependencies
 {
     [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
@@ -126,8 +149,6 @@ function Install-BuildDependencies
     if (-not $?) {exit 1}
     Write-Build -Color Cyan " ...done."
 }
-
-$WasCalledFromInvokeBuild = (Get-PSCallStack).Command -match 'Invoke-Build'
 
 if (-not ($Bootstrap -or $WasCalledFromInvokeBuild))
 {

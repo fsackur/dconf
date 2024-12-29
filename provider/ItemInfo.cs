@@ -27,19 +27,42 @@ namespace Dconf
 
         public string FullName { get; init; }
         public string Name { get; init; }
+
+        public abstract NodeInfo Get(string path);
+
         public override string ToString() => FullName;
     }
 
     public abstract class SchemaInfoBase : NodeInfo
     {
-        private IList<SchemaInfoBase> children = new List<SchemaInfoBase>();
+        protected IList<SchemaInfoBase> schemas = new List<SchemaInfoBase>();
 
         internal SchemaInfoBase(string fullName) : base(fullName) {}
 
-        public virtual IReadOnlyList<SchemaInfoBase> Children { get => children.AsReadOnly(); }
+        public virtual IReadOnlyList<NodeInfo> Children { get => schemas.AsReadOnly(); }
 
-        internal static SchemaInfoBase Build(IEnumerable<string> paths)
+        public override NodeInfo Get(string path)
         {
+            var chunks = GSettings.ToChunks(path);
+            var chunk = chunks.FirstOrDefault();
+
+            if (chunk == null && Name == string.Empty)
+            {
+                return this;
+            }
+
+            var item = Children.Where(i => i.Name == chunk).First();
+            if (chunks.Length == 1)
+            {
+                return item;
+            }
+
+            return item.Get(string.Join('.', chunks.Skip(1)));
+        }
+
+        internal static SchemaInfoBase Build()
+        {
+            var paths = GSettings.GetSchemas();
             var segments = paths.Select(p => p.Split('.'));
             return Build("/", segments, 0);
         }
@@ -70,37 +93,29 @@ namespace Dconf
             {
                 var newName = string.Join('.', group.First()[0..newDepth]);
                 var child = Build(newName, group, newDepth);
-                node.children.Add(child);
+                node.schemas.Add(child);
             }
 
             return node;
-        }
-
-        public SchemaInfoBase GetSchema(string path)
-        {
-            var chunks = GSettings.ToChunks(path);
-            var chunk = chunks.FirstOrDefault();
-
-            if (chunk == null && Name == string.Empty)
-            {
-                return this;
-            }
-
-            var item = Children.Where(i => i.Name == chunk).First();
-            if (chunks.Length == 1)
-            {
-                return item;
-            }
-
-            return item.GetSchema(string.Join('.', chunks.Skip(1)));
         }
     }
 
     public class SchemaInfo : SchemaInfoBase
     {
-        private IList<KeyInfo> keys = new List<KeyInfo>();
+        protected IList<KeyInfo>? keys = null;
 
         internal SchemaInfo(string fullName) : base(fullName) {}
+
+        public IReadOnlyList<KeyInfo> Keys
+        {
+            get
+            {
+                keys ??= GSettings.GetKeys(FullName).Select(k => new KeyInfo($"{FullName}/{k}")).ToList();
+                return keys.ToList().AsReadOnly();
+            }
+        }
+
+        public override IReadOnlyList<NodeInfo> Children { get => schemas.Concat<NodeInfo>(Keys).ToList().AsReadOnly(); }
     }
 
     public class SchemaPartInfo : SchemaInfoBase
@@ -111,5 +126,10 @@ namespace Dconf
     public class KeyInfo : NodeInfo
     {
         internal KeyInfo(string fullName) : base(fullName) {}
+
+        public override KeyInfo Get(string path)
+        {
+            return this;
+        }
     }
 }

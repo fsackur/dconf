@@ -27,17 +27,13 @@
               </TableColumnItem>
               <TableColumnItem>
                 <ScriptBlock>
-                  if ($_ -is [Dconf.SchemaInfo])
-                  {
-                    $_.FullName
-                  }
-                  elseif ($_ -is [Dconf.SchemaPartInfo])
+                  if ($_ -is [Dconf.SchemaPartInfo])
                   {
                     $_.FullName + "..."
                   }
                   else
                   {
-                    $_.FullName + "/" + $_.Name
+                    $_.FullName
                   }
                 </ScriptBlock>
               </TableColumnItem>

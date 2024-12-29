@@ -42,7 +42,7 @@ namespace Dconf
                 return;
             }
 
-            var item = drive.RootNode.GetSchema(path);
+            var item = drive.RootNode.Get(path);
             var isContainer = item is SchemaInfoBase;
             WriteItemObject(item, item.FullName, isContainer);
         }

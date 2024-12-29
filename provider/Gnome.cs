@@ -35,7 +35,7 @@ namespace Dconf
             {
                 throw new RuntimeException(error);
             }
-            return output.Split("\n");
+            return output.TrimEnd().Split("\n");
         }
 
         public static string Trim(string path)

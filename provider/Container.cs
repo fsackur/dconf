@@ -24,8 +24,16 @@ namespace Dconf
         {
             WriteDebug($"GetChildItems {path}");
             var drive = Drive;
-            var item = drive.RootNode.GetSchema(path);
-            foreach (var child in item.Children)
+            var item = drive.RootNode.Get(path);
+
+            var schema = item as SchemaInfoBase;
+            if (schema == null)
+            {
+                WriteItemObject(item, item.FullName, false);
+                return;
+            }
+
+            foreach (var child in schema.Children)
             {
                 var isContainer = child is SchemaInfoBase;
                 WriteItemObject(child, child.FullName, isContainer);

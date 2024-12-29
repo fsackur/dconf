@@ -1,14 +1,6 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Dynamic;
-using System.IO;
 using System.Linq;
-using System.Diagnostics;
-using System.Management.Automation;
-using System.Management.Automation.Provider;
-using System.Text.RegularExpressions;
-using System.ComponentModel;
 
 namespace Dconf
 {
@@ -35,7 +27,7 @@ namespace Dconf
 
     public abstract class Schema : NodeInfo
     {
-        protected IList<Schema> schemas = new List<Schema>();
+        protected IList<Schema> schemas = [];
 
         internal Schema(string fullName) : base(fullName) {}
 
@@ -79,7 +71,7 @@ namespace Dconf
         private static Schema Build(string fullName, IEnumerable<string[]> splitPaths, int depth)
         {
             Schema? node = null;
-            List<string[]> childPaths = new();
+            List<string[]> childPaths = [];
             foreach (var splitPath in splitPaths)
             {
                 if (splitPath.Length == depth)

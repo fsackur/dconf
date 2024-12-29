@@ -1,14 +1,3 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Dynamic;
-using System.IO;
-using System.Linq;
-using System.Diagnostics;
-using System.Management.Automation;
-using System.Management.Automation.Provider;
-using System.Text.RegularExpressions;
-using System.ComponentModel;
 
 namespace Dconf
 {
@@ -16,9 +5,7 @@ namespace Dconf
     {
         protected override bool IsItemContainer(string path)
         {
-            WriteDebug($"IsItemContainer {path}");
-            var item = Get(path);
-            return item is Schema;
+            return Get(path) is Schema;
         }
     }
 }

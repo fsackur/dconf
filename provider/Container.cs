@@ -1,14 +1,5 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Dynamic;
-using System.IO;
 using System.Linq;
-using System.Diagnostics;
 using System.Management.Automation;
-using System.Management.Automation.Provider;
-using System.Text.RegularExpressions;
-using System.ComponentModel;
 
 namespace Dconf
 {
@@ -16,18 +7,16 @@ namespace Dconf
     {
         protected override bool HasChildItems(string path)
         {
-            WriteDebug($"HasChildItems {path}");
-            var schema = Get(path) as Schema;
-            return schema != null && schema.Children.Count() > 0;
+            if (Get(path) is Schema schema)
+            {
+                return schema.Children.Count > 0;
+            }
+            return false;
         }
 
         protected override void GetChildNames(string path, ReturnContainers returnContainers)
         {
-            WriteDebug($"GetChildNames {path}");
-            var item = Get(path);
-
-            var schema = item as Schema;
-            if (schema == null) { return; }
+            if (Get(path) is not Schema schema) { return;}
 
             foreach (var child in schema.Children)
             {
@@ -38,12 +27,9 @@ namespace Dconf
 
         protected override void GetChildItems(string path, bool recurse)
         {
-            WriteDebug($"GetChildItems {path}");
-            var item = Get(path);
-            if (item == null) { return; }
+            if (Get(path) is not NodeInfo item) { return; }
 
-            var schema = item as Schema;
-            if (schema == null)
+            if (item is not Schema schema)
             {
                 WriteItemObject(item, item.FullName, false);
                 return;

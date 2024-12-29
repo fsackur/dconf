@@ -1,14 +1,6 @@
 ﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Dynamic;
-using System.IO;
-using System.Linq;
-using System.Diagnostics;
 using System.Management.Automation;
 using System.Management.Automation.Provider;
-using System.Text.RegularExpressions;
-using System.ComponentModel;
 using System.Reflection;
 
 namespace Dconf
@@ -23,17 +15,7 @@ namespace Dconf
     [CmdletProvider("Dconf", ProviderCapabilities.ExpandWildcards)]
     public partial class DconfProvider : NavigationCmdletProvider
     {
-        private DriveInfo Drive
-        {
-            get
-            {
-                var flags = BindingFlags.NonPublic | BindingFlags.Instance;
-                var context = typeof(CmdletProvider).GetProperty("Context", flags)?.GetValue(this)!;
-                var drive = context.GetType().GetProperty("Drive", flags)?.GetValue(context)!;
-                WriteDebug($"Accessed DriveInfo: {drive}");
-                return (DriveInfo)drive;
-            }
-        }
+        private DriveInfo Drive { get => (DriveInfo) this.PSDriveInfo; }
 
         protected override PSDriveInfo NewDrive(PSDriveInfo drive)
         {
@@ -45,7 +27,7 @@ namespace Dconf
             if (drive == null)
             {
                 WriteError(new ErrorRecord(
-                    new ArgumentNullException("drive"),
+                    new ArgumentNullException(nameof(drive)),
                     "NullDrive",
                     ErrorCategory.InvalidArgument,
                     drive)

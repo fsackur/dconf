@@ -64,7 +64,7 @@ namespace Dconf
         {
             var paths = GSettings.GetSchemas();
             var segments = paths.Select(p => p.Split('.'));
-            return Build("/", segments, 0);
+            return Build("", segments, 0);
         }
 
         private static Schema Build(string fullName, IEnumerable<string[]> splitPaths, int depth)
@@ -91,7 +91,7 @@ namespace Dconf
 
             foreach (var group in groups)
             {
-                var newName = string.Join('.', group.First()[0..newDepth]);
+                var newName = string.Join('/', group.First()[0..newDepth]);
                 var child = Build(newName, group, newDepth);
                 node.schemas.Add(child);
             }

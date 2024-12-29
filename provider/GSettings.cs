@@ -44,12 +44,14 @@ namespace Dconf
             return chunks.Length > 0 ? chunks : [ string.Empty ];
         }
 
+        public static string Normalize(string path) => string.Join('.', ToChunks(path));
+
         public static string GetParent(string path) => string.Join('.', ToChunks(path).SkipLast(1));
 
         public static string GetName(string path) => ToChunks(path).Last();
 
         public static string[] GetSchemas() => Invoke(["list-schemas"]);
 
-        public static string[] GetKeys(string path) => Invoke(["list-keys", path]);
+        public static string[] GetKeys(string path) => Invoke(["list-keys", Normalize(path)]);
     }
 }

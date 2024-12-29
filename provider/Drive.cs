@@ -20,7 +20,7 @@ namespace Dconf
         public DriveInfo(PSDriveInfo driveInfo) : base(driveInfo) { }
     }
 
-    [CmdletProvider("Dconf", ProviderCapabilities.None)]
+    [CmdletProvider("Dconf", ProviderCapabilities.ExpandWildcards)]
     public partial class DconfProvider : NavigationCmdletProvider
     {
         private DriveInfo Drive

@@ -23,7 +23,13 @@ namespace Dconf
         protected override void GetChildItems(string path, bool recurse)
         {
             WriteDebug($"GetChildItems {path}");
-
+            var drive = Drive;
+            var item = drive.RootNode.Get(path);
+            foreach (var child in item.Children)
+            {
+                var isContainer = child.Type != NodeType.Key;
+                WriteItemObject(child, child.FullName, isContainer);
+            }
         }
     }
 }

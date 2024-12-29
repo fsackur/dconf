@@ -24,5 +24,9 @@ Describe "Dconf.Provider" {
         It "Gets item" {
             Get-Item "gnome" | Should -Match "gnome"
         }
+
+        It "Gets child items" {
+            Get-ChildItem "gnome" | Where-Object Name -eq "mutter" | Should -Not -BeNullOrEmpty
+        }
     }
 }

@@ -16,24 +16,24 @@ namespace Dconf
     {
         protected override bool IsValidPath(string path)
         {
+            WriteDebug($"IsValidPath {path}");
             return true;
         }
 
         protected override bool ItemExists(string path)
         {
             WriteDebug($"ItemExists {path}");
-            var decomposed = DecomposePath(path);
-            return decomposed.leaf.Count() <= 1;
+            return true;
         }
 
-        protected override void GetItem(string path)
-        {
-            WriteDebug($"GetItem {path}");
-            string command;
-            bool isContainer;
-            (command, isContainer) = path.EndsWith("/") ? ("dump", true) : ("read", false);
+        // protected override void GetItem(string path)
+        // {
+        //     WriteDebug($"GetItem {path}");
+        //     string command;
+        //     bool isContainer;
+        //     (command, isContainer) = path.EndsWith("/") ? ("dump", true) : ("read", false);
 
-            WriteItemObject(InvokeDconf([command, path]), path, isContainer);
-        }
+        //     WriteItemObject(InvokeDconf([command, path]), path, isContainer);
+        // }
     }
 }

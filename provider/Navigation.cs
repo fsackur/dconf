@@ -17,8 +17,7 @@ namespace Dconf
         protected override bool IsItemContainer(string path)
         {
             WriteDebug($"IsItemContainer {path}");
-            var decomposed = DecomposePath(path);
-            return decomposed.leaf.Count() == 0;
+            return true;
         }
     }
 }

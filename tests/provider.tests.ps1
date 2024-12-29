@@ -20,5 +20,9 @@ Describe "Dconf.Provider" {
         It "Changes location" {
             Get-Location | Should -Be $Expected
         }
+
+        It "Gets item" {
+            Get-Item "gnome" | Should -Match "gnome"
+        }
     }
 }

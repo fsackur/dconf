@@ -30,13 +30,9 @@ namespace Dconf
         private NodeInfo(string fullName, NodeType type)
         {
             FullName = fullName;
+            Name = GSettings.GetName(fullName);
             Type = type;
         }
-
-        public IReadOnlyList<NodeInfo> Children { get => children.AsReadOnly(); }
-        public string FullName { get; init; }
-        public NodeType Type { get; init; }
-        public override string ToString() => FullName;
 
         internal static NodeInfo Build(IEnumerable<string> paths)
         {
@@ -74,6 +70,31 @@ namespace Dconf
             }
 
             return node;
+        }
+
+        public IReadOnlyList<NodeInfo> Children { get => children.AsReadOnly(); }
+        public string FullName { get; init; }
+        public string Name { get; init; }
+        public NodeType Type { get; init; }
+        public override string ToString() => FullName;
+
+        public NodeInfo Get(string path)
+        {
+            var chunks = GSettings.ToChunks(path);
+            var chunk = chunks.FirstOrDefault();
+
+            if (chunk == null && Name == string.Empty)
+            {
+                return this;
+            }
+
+            var item = Children.Where(i => i.Name == chunk).First();
+            if (chunks.Length == 1)
+            {
+                return item;
+            }
+
+            return item.Get(string.Join('.', chunks.Skip(1)));
         }
     }
 }

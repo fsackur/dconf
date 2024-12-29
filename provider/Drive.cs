@@ -9,6 +9,7 @@ using System.Management.Automation;
 using System.Management.Automation.Provider;
 using System.Text.RegularExpressions;
 using System.ComponentModel;
+using System.Reflection;
 
 namespace Dconf
 {
@@ -22,6 +23,18 @@ namespace Dconf
     [CmdletProvider("Dconf", ProviderCapabilities.None)]
     public partial class DconfProvider : NavigationCmdletProvider
     {
+        private DriveInfo Drive
+        {
+            get
+            {
+                var flags = BindingFlags.NonPublic | BindingFlags.Instance;
+                var context = typeof(CmdletProvider).GetProperty("Context", flags)?.GetValue(this)!;
+                var drive = context.GetType().GetProperty("Drive", flags)?.GetValue(context)!;
+                WriteDebug($"Accessed DriveInfo: {drive}");
+                return (DriveInfo)drive;
+            }
+        }
+
         protected override PSDriveInfo NewDrive(PSDriveInfo drive)
         {
             return new DriveInfo(drive);

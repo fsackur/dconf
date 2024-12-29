@@ -47,11 +47,15 @@ namespace Dconf
             return path;
         }
 
-        public static string ToGsettingsPath(string path) => Trim(path).Replace('/', '.');
+        public static string[] ToChunks(string path)
+        {
+            var chunks = path.Split(new char[] { '/', '.'}, StringSplitOptions.RemoveEmptyEntries);
+            return chunks.Length > 0 ? chunks : [ string.Empty ];
+        }
 
-        public static string[] ToChunks(string path) => Trim(path).Split('/');
+        public static string GetParent(string path) => string.Join('.', ToChunks(path).SkipLast(1));
 
-        public static string GetBase(string path) => string.Join('.', ToChunks(path)[0..^2]);
+        public static string GetName(string path) => ToChunks(path).Last();
 
         public static string[] GetSchemas() => Invoke(["list-schemas"]);
 

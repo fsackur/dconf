@@ -26,14 +26,25 @@ namespace Dconf
             return true;
         }
 
-        // protected override void GetItem(string path)
-        // {
-        //     WriteDebug($"GetItem {path}");
-        //     string command;
-        //     bool isContainer;
-        //     (command, isContainer) = path.EndsWith("/") ? ("dump", true) : ("read", false);
+        protected override void GetItem(string path)
+        {
+            WriteDebug($"GetItem {path}");
+            var drive = Drive;
+            if (Drive == null)
+            {
+                // TODO: more appropriate error
+                WriteError(new ErrorRecord(
+                    new ArgumentException("drive"),
+                    "Drive",
+                    ErrorCategory.InvalidArgument,
+                    drive)
+                );
+                return;
+            }
 
-        //     WriteItemObject(InvokeDconf([command, path]), path, isContainer);
-        // }
+            var item = drive.RootNode.Get(path);
+            var isContainer = item.Type != NodeType.Key;
+            WriteItemObject(item, item.FullName, isContainer);
+        }
     }
 }

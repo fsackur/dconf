@@ -14,19 +14,35 @@ namespace Dconf
 {
     public partial class DconfProvider
     {
-        // protected override void GetChildNames(string path, ReturnContainers returnContainers)
-        // {
-        //     WriteDebug($"GetChildNames {path}");
+        protected override bool HasChildItems(string path)
+        {
+            WriteDebug($"HasChildItems {path}");
+            var schema = Get(path) as Schema;
+            return schema != null && schema.Children.Count() > 0;
+        }
 
-        // }
+        protected override void GetChildNames(string path, ReturnContainers returnContainers)
+        {
+            WriteDebug($"GetChildNames {path}");
+            var item = Get(path);
+
+            var schema = item as Schema;
+            if (schema == null) { return; }
+
+            foreach (var child in schema.Children)
+            {
+                var isContainer = child is Schema;
+                WriteItemObject(child.Name, path, isContainer);
+            }
+        }
 
         protected override void GetChildItems(string path, bool recurse)
         {
             WriteDebug($"GetChildItems {path}");
-            var drive = Drive;
-            var item = drive.RootNode.Get(path);
+            var item = Get(path);
+            if (item == null) { return; }
 
-            var schema = item as SchemaInfoBase;
+            var schema = item as Schema;
             if (schema == null)
             {
                 WriteItemObject(item, item.FullName, false);
@@ -35,8 +51,15 @@ namespace Dconf
 
             foreach (var child in schema.Children)
             {
-                var isContainer = child is SchemaInfoBase;
+                var isContainer = child is Schema;
                 WriteItemObject(child, child.FullName, isContainer);
+            }
+
+            if (!recurse) { return; }
+
+            foreach (var child in schema.Children.Where(child => child is Schema))
+            {
+                GetChildItems(child.FullName, recurse);
             }
         }
     }

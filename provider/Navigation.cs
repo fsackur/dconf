@@ -17,7 +17,8 @@ namespace Dconf
         protected override bool IsItemContainer(string path)
         {
             WriteDebug($"IsItemContainer {path}");
-            return true;
+            var item = Get(path);
+            return item is Schema;
         }
     }
 }

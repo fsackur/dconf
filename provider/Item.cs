@@ -14,6 +14,8 @@ namespace Dconf
 {
     public partial class DconfProvider
     {
+        private NodeInfo Get(string path) => Drive.RootNode.Get(path);
+
         protected override bool IsValidPath(string path)
         {
             WriteDebug($"IsValidPath {path}");
@@ -23,28 +25,15 @@ namespace Dconf
         protected override bool ItemExists(string path)
         {
             WriteDebug($"ItemExists {path}");
-            return true;
+            return Get(path) != null;
         }
 
         protected override void GetItem(string path)
         {
             WriteDebug($"GetItem {path}");
-            var drive = Drive;
-            if (Drive == null)
-            {
-                // TODO: more appropriate error
-                WriteError(new ErrorRecord(
-                    new ArgumentException("drive"),
-                    "Drive",
-                    ErrorCategory.InvalidArgument,
-                    drive)
-                );
-                return;
-            }
-
-            var item = drive.RootNode.Get(path);
-            var isContainer = item is SchemaInfoBase;
-            WriteItemObject(item, item.FullName, isContainer);
+            var item = Get(path);
+            var isContainer = item is Schema;
+            WriteItemObject(item, path, isContainer);
         }
     }
 }

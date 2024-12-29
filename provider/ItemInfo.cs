@@ -33,11 +33,11 @@ namespace Dconf
         public override string ToString() => FullName;
     }
 
-    public abstract class SchemaInfoBase : NodeInfo
+    public abstract class Schema : NodeInfo
     {
-        protected IList<SchemaInfoBase> schemas = new List<SchemaInfoBase>();
+        protected IList<Schema> schemas = new List<Schema>();
 
-        internal SchemaInfoBase(string fullName) : base(fullName) {}
+        internal Schema(string fullName) : base(fullName) {}
 
         public virtual IReadOnlyList<NodeInfo> Children { get => schemas.AsReadOnly(); }
 
@@ -60,16 +60,16 @@ namespace Dconf
             return item.Get(string.Join('.', chunks.Skip(1)));
         }
 
-        internal static SchemaInfoBase Build()
+        internal static Schema Build()
         {
             var paths = GSettings.GetSchemas();
             var segments = paths.Select(p => p.Split('.'));
             return Build("/", segments, 0);
         }
 
-        private static SchemaInfoBase Build(string fullName, IEnumerable<string[]> splitPaths, int depth)
+        private static Schema Build(string fullName, IEnumerable<string[]> splitPaths, int depth)
         {
-            SchemaInfoBase? node = null;
+            Schema? node = null;
             List<string[]> childPaths = new();
             foreach (var splitPath in splitPaths)
             {
@@ -100,7 +100,7 @@ namespace Dconf
         }
     }
 
-    public class SchemaInfo : SchemaInfoBase
+    public class SchemaInfo : Schema
     {
         protected IList<KeyInfo>? keys = null;
 
@@ -118,7 +118,7 @@ namespace Dconf
         public override IReadOnlyList<NodeInfo> Children { get => schemas.Concat<NodeInfo>(Keys).ToList().AsReadOnly(); }
     }
 
-    public class SchemaPartInfo : SchemaInfoBase
+    public class SchemaPartInfo : Schema
     {
         internal SchemaPartInfo(string fullName) : base(fullName) {}
     }

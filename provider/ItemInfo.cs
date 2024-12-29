@@ -12,50 +12,54 @@ using System.ComponentModel;
 
 namespace Dconf
 {
-    public enum NodeType
-    {
-        SchemaPart,
-        Schema,
-        Key
-    }
-
     /// <remarks>
     /// If we have schemas `org.gnome.mutter` and `org.gnome.shell`, that does not
     /// make `org.gnome` a valid schema. But we still wish to navigate through it.
     /// This is a tree to enable navigation through partial segments of schemas.
     /// </remarks>
-    public class NodeInfo
+    public abstract class NodeInfo
     {
-        private IList<NodeInfo> children = new List<NodeInfo>();
-        private NodeInfo(string fullName, NodeType type)
+        internal NodeInfo(string fullName)
         {
             FullName = fullName;
             Name = GSettings.GetName(fullName);
-            Type = type;
         }
 
-        internal static NodeInfo Build(IEnumerable<string> paths)
+        public string FullName { get; init; }
+        public string Name { get; init; }
+        public override string ToString() => FullName;
+    }
+
+    public abstract class SchemaInfoBase : NodeInfo
+    {
+        private IList<SchemaInfoBase> children = new List<SchemaInfoBase>();
+
+        internal SchemaInfoBase(string fullName) : base(fullName) {}
+
+        public virtual IReadOnlyList<SchemaInfoBase> Children { get => children.AsReadOnly(); }
+
+        internal static SchemaInfoBase Build(IEnumerable<string> paths)
         {
             var segments = paths.Select(p => p.Split('.'));
             return Build("/", segments, 0);
         }
 
-        private static NodeInfo Build(string fullName, IEnumerable<string[]> splitPaths, int depth)
+        private static SchemaInfoBase Build(string fullName, IEnumerable<string[]> splitPaths, int depth)
         {
-            NodeInfo? node = null;
+            SchemaInfoBase? node = null;
             List<string[]> childPaths = new();
             foreach (var splitPath in splitPaths)
             {
                 if (splitPath.Length == depth)
                 {
-                    node = new NodeInfo(fullName, NodeType.Schema);
+                    node = new SchemaInfo(fullName);
                 }
                 else
                 {
                     childPaths.Add(splitPath);
                 }
             }
-            node ??= new NodeInfo(fullName, NodeType.SchemaPart);
+            node ??= new SchemaPartInfo(fullName);
 
             var fragments = splitPaths.Where(p => p.Count() > depth);
 
@@ -72,13 +76,7 @@ namespace Dconf
             return node;
         }
 
-        public IReadOnlyList<NodeInfo> Children { get => children.AsReadOnly(); }
-        public string FullName { get; init; }
-        public string Name { get; init; }
-        public NodeType Type { get; init; }
-        public override string ToString() => FullName;
-
-        public NodeInfo Get(string path)
+        public SchemaInfoBase GetSchema(string path)
         {
             var chunks = GSettings.ToChunks(path);
             var chunk = chunks.FirstOrDefault();
@@ -94,7 +92,24 @@ namespace Dconf
                 return item;
             }
 
-            return item.Get(string.Join('.', chunks.Skip(1)));
+            return item.GetSchema(string.Join('.', chunks.Skip(1)));
         }
+    }
+
+    public class SchemaInfo : SchemaInfoBase
+    {
+        private IList<KeyInfo> keys = new List<KeyInfo>();
+
+        internal SchemaInfo(string fullName) : base(fullName) {}
+    }
+
+    public class SchemaPartInfo : SchemaInfoBase
+    {
+        internal SchemaPartInfo(string fullName) : base(fullName) {}
+    }
+
+    public class KeyInfo : NodeInfo
+    {
+        internal KeyInfo(string fullName) : base(fullName) {}
     }
 }

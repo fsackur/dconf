@@ -24,10 +24,10 @@ namespace Dconf
         {
             WriteDebug($"GetChildItems {path}");
             var drive = Drive;
-            var item = drive.RootNode.Get(path);
+            var item = drive.RootNode.GetSchema(path);
             foreach (var child in item.Children)
             {
-                var isContainer = child.Type != NodeType.Key;
+                var isContainer = child is SchemaInfoBase;
                 WriteItemObject(child, child.FullName, isContainer);
             }
         }

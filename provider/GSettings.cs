@@ -53,5 +53,7 @@ namespace Dconf
         public static string[] GetSchemas() => Invoke(["list-schemas"]);
 
         public static string[] GetKeys(string path) => Invoke(["list-keys", Normalize(path)]);
+
+        public static string[] Get(string path) => Invoke(["get", GetParent(path), GetName(path)]);
     }
 }

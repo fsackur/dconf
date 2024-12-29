@@ -13,7 +13,7 @@ namespace Dconf
     }
 
     [CmdletProvider("Dconf", ProviderCapabilities.ExpandWildcards)]
-    public partial class DconfProvider : NavigationCmdletProvider
+    public partial class DconfProvider : NavigationCmdletProvider, IContentCmdletProvider
     {
         private DriveInfo Drive { get => (DriveInfo) this.PSDriveInfo; }
 

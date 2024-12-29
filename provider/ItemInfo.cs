@@ -38,12 +38,7 @@ namespace Dconf
             var chunks = GSettings.ToChunks(path);
             if (chunks.Length == 0)
             {
-                if (Name == string.Empty)
-                {
-                    Console.WriteLine($"bailing empty with {this}");
-                    return this;
-                }
-                else { return null; }
+                return Name == string.Empty ? this : null;
             }
 
             var chunk = chunks[0];
@@ -52,11 +47,7 @@ namespace Dconf
             var item = Children.Where(i => i.Name == chunk).FirstOrDefault();
             if (item == null) { return null; }
 
-            if (chunks.Length == 0)
-            {
-                Console.WriteLine($"bailing2 with {item}");
-                return item;
-            }
+            if (chunks.Length == 0) { return item; }
 
             return item.Get(string.Join('.', chunks));
         }

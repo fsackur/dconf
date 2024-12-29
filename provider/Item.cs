@@ -14,7 +14,7 @@ namespace Dconf
 {
     public partial class DconfProvider
     {
-        private NodeInfo Get(string path) => Drive.RootNode.Get(path);
+        private NodeInfo? Get(string path) => Drive.RootNode.Get(path);
 
         protected override bool IsValidPath(string path)
         {

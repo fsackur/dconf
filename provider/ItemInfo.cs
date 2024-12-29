@@ -28,7 +28,7 @@ namespace Dconf
         public string FullName { get; init; }
         public string Name { get; init; }
 
-        public abstract NodeInfo Get(string path);
+        public abstract NodeInfo? Get(string path);
 
         public override string ToString() => FullName;
     }
@@ -41,23 +41,32 @@ namespace Dconf
 
         public virtual IReadOnlyList<NodeInfo> Children { get => schemas.AsReadOnly(); }
 
-        public override NodeInfo Get(string path)
+        public override NodeInfo? Get(string path)
         {
             var chunks = GSettings.ToChunks(path);
-            var chunk = chunks.FirstOrDefault();
-
-            if (chunk == null && Name == string.Empty)
+            if (chunks.Length == 0)
             {
-                return this;
+                if (Name == string.Empty)
+                {
+                    Console.WriteLine($"bailing empty with {this}");
+                    return this;
+                }
+                else { return null; }
             }
 
-            var item = Children.Where(i => i.Name == chunk).First();
-            if (chunks.Length == 1)
+            var chunk = chunks[0];
+            chunks = chunks[1..^0];
+
+            var item = Children.Where(i => i.Name == chunk).FirstOrDefault();
+            if (item == null) { return null; }
+
+            if (chunks.Length == 0)
             {
+                Console.WriteLine($"bailing2 with {item}");
                 return item;
             }
 
-            return item.Get(string.Join('.', chunks.Skip(1)));
+            return item.Get(string.Join('.', chunks));
         }
 
         internal static Schema Build()
@@ -127,9 +136,6 @@ namespace Dconf
     {
         internal KeyInfo(string fullName) : base(fullName) {}
 
-        public override KeyInfo Get(string path)
-        {
-            return this;
-        }
+        public override KeyInfo? Get(string path) => path == FullName ? this : null;
     }
 }

@@ -31,21 +31,21 @@ namespace Dconf
 
             if (item is not Schema schema)
             {
-                WriteItemObject(item, item.FullName, false);
+                WriteItemObject(item, item.Path, false);
                 return;
             }
 
             foreach (var child in schema.Children)
             {
                 var isContainer = child is Schema;
-                WriteItemObject(child, child.FullName, isContainer);
+                WriteItemObject(child, child.Path, isContainer);
             }
 
             if (!recurse) { return; }
 
             foreach (var child in schema.Children.Where(child => child is Schema))
             {
-                GetChildItems(child.FullName, recurse);
+                GetChildItems(child.Path, recurse);
             }
         }
     }

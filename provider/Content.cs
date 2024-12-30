@@ -30,7 +30,7 @@ namespace Dconf
                 return new string[0];
             }
 
-            var value = GSettings.Get(key.FullName);
+            var value = GSettings.Get(key.Schema, key.Name);
             isOpen = false;
             return value;
         }

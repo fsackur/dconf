@@ -33,7 +33,7 @@ namespace Dconf
 
         private IList<string> ExpandPath(NodeInfo item, string[] chunks)
         {
-            List<string> matches = new();
+            List<string> matches = [];
             if (chunks.Length == 0) { return matches; }
 
             if (item is not Schema schema) { return matches; }
@@ -48,7 +48,7 @@ namespace Dconf
                 {
                     if (chunks.Length == 0)
                     {
-                        matches.Add(child.FullName);
+                        matches.Add(child.Path);
                     }
                     else
                     {

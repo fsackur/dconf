@@ -11,25 +11,35 @@ namespace Dconf
     /// </remarks>
     public abstract class NodeInfo
     {
-        internal NodeInfo(string fullName)
+        internal NodeInfo(string name, string path)
         {
-            FullName = fullName;
-            Name = GSettings.GetName(fullName);
+            Name = name;
+            Path = path;
         }
 
-        public string FullName { get; init; }
         public string Name { get; init; }
+
+        public string Path { get; init; }
+
+        internal string[]? chunks = null;
+        internal string[] Chunks {
+            get
+            {
+                chunks ??= GSettings.ToChunks(Path);
+                return chunks;
+            }
+        }
 
         public abstract NodeInfo? Get(string path);
 
-        public override string ToString() => FullName;
+        public override string ToString() => Name;
     }
 
     public abstract class Schema : NodeInfo
     {
         protected IList<Schema> schemas = [];
 
-        internal Schema(string fullName) : base(fullName) {}
+        internal Schema(string name, string path) : base(name, path) { }
 
         public virtual IReadOnlyList<NodeInfo> Children { get => schemas.AsReadOnly(); }
 
@@ -52,43 +62,43 @@ namespace Dconf
             return item.Get(string.Join('.', chunks));
         }
 
-        internal static Schema Build()
+        internal static Schema BuildTree()
         {
-            var paths = GSettings.GetSchemas();
-            var segments = paths.Select(p => p.Split('.'));
-            return Build("", segments, 0);
+            var nameAndPaths = GSettings.ListSchemas(true);
+            var schemas = nameAndPaths.Select(
+                nap => {
+                    var l = nap.Split(' ', 2);
+                    return new SchemaInfo(l[0], l[1]);
+                }
+            );
+            SchemaPartInfo root = new("/");
+            BuildTree(root, schemas, 0);
+            return root;
         }
 
-        private static Schema Build(string fullName, IEnumerable<string[]> splitPaths, int depth)
+        private static void BuildTree(Schema parent, IEnumerable<Schema> schemas, int depth)
         {
-            Schema? node = null;
-            List<string[]> childPaths = [];
-            foreach (var splitPath in splitPaths)
-            {
-                if (splitPath.Length == depth)
-                {
-                    node = new SchemaInfo(fullName);
-                }
-                else
-                {
-                    childPaths.Add(splitPath);
-                }
-            }
-            node ??= new SchemaPartInfo(fullName);
-
-            var fragments = splitPaths.Where(p => p.Count() > depth);
-
-            var groups = childPaths.GroupBy(p => p[depth]);
+            var groups = schemas.GroupBy(s => s.Chunks[depth]);
             var newDepth = depth + 1;
-
             foreach (var group in groups)
             {
-                var newName = string.Join('/', group.First()[0..newDepth]);
-                var child = Build(newName, group, newDepth);
-                node.schemas.Add(child);
+                Schema? container = null;
+                List<Schema> children = [];
+                foreach (var child in group)
+                {
+                    if (child.Chunks.Length == newDepth)
+                    {
+                        container = child;
+                    }
+                    else
+                    {
+                        children.Add(child);
+                    }
+                }
+                container ??= new SchemaPartInfo($"{parent.Path}/{group.Key}");
+                parent.schemas.Add(container);
+                BuildTree(container, children, newDepth);
             }
-
-            return node;
         }
     }
 
@@ -96,13 +106,16 @@ namespace Dconf
     {
         protected IList<KeyInfo>? keys = null;
 
-        internal SchemaInfo(string fullName) : base(fullName) {}
+        internal SchemaInfo(string name, string path) : base(name, path) { }
 
         public IReadOnlyList<KeyInfo> Keys
         {
             get
             {
-                keys ??= GSettings.GetKeys(FullName).Select(k => new KeyInfo($"{FullName}/{k}")).ToList();
+                keys ??= GSettings
+                    .ListKeys(Name)
+                    .Select(k => new KeyInfo(Name, k, $"{Path}/{k}"))
+                    .ToList();
                 return keys.ToList().AsReadOnly();
             }
         }
@@ -112,13 +125,18 @@ namespace Dconf
 
     public class SchemaPartInfo : Schema
     {
-        internal SchemaPartInfo(string fullName) : base(fullName) {}
+        internal SchemaPartInfo(string path) : base("", path) { }
     }
 
     public class KeyInfo : NodeInfo
     {
-        internal KeyInfo(string fullName) : base(fullName) {}
+        internal KeyInfo(string schema, string name, string path) : base(name, path)
+        {
+            Schema = schema;
+        }
 
-        public override KeyInfo? Get(string path) => path == FullName ? this : null;
+        public string Schema { get; init; }
+
+        public override KeyInfo? Get(string path) => path == Path ? this : null;
     }
 }

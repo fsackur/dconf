@@ -8,7 +8,7 @@ namespace Dconf
     internal class DriveInfo : PSDriveInfo
     {
         private Schema? rootNode = null;
-        internal Schema RootNode { get { rootNode ??= Schema.Build(); return rootNode; } }
+        internal Schema RootNode { get { rootNode ??= Schema.BuildTree(); return rootNode; } }
         public DriveInfo(PSDriveInfo driveInfo) : base(driveInfo) { }
     }
 

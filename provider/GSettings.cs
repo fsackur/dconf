@@ -40,8 +40,8 @@ namespace Dconf
 
         public static string[] ToChunks(string path)
         {
-            var chunks = path.Split(new char[] { '/', '.'}, StringSplitOptions.RemoveEmptyEntries);
-            return chunks.Length > 0 ? chunks : [ string.Empty ];
+            var chunks = path.Split(new char[] { '/', '.' }, StringSplitOptions.RemoveEmptyEntries);
+            return chunks.Length > 0 ? chunks : [string.Empty];
         }
 
         public static string Normalize(string path) => string.Join('.', ToChunks(path));
@@ -50,10 +50,17 @@ namespace Dconf
 
         public static string GetName(string path) => ToChunks(path).Last();
 
-        public static string[] GetSchemas() => Invoke(["list-schemas"]);
+        public static string[] ListSchemas(bool includePaths)
+        {
+            string[] args = ["list-schemas"];
+            if (includePaths) { args = [.. args, "--print-paths"]; }
+            return Invoke(args);
+        }
 
-        public static string[] GetKeys(string path) => Invoke(["list-keys", Normalize(path)]);
+        public static string[] ListKeys(string path) => Invoke(["list-keys", Normalize(path)]);
 
-        public static string[] Get(string path) => Invoke(["get", GetParent(path), GetName(path)]);
+        public static string[] Get(string schema, string key) => Invoke(["get", schema, key]);
+
+        public static string[] Describe(string schema, string key) => Invoke(["describe", schema, key]);
     }
 }

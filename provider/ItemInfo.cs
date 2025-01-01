@@ -11,8 +11,11 @@ namespace Dconf
     /// </remarks>
     public abstract class NodeInfo
     {
-        internal NodeInfo(string name, string path)
+        protected GSettings gsettings;
+
+        internal NodeInfo(GSettings gsettings, string name, string path)
         {
+            this.gsettings = gsettings;
             Name = name;
             Path = path;
         }
@@ -25,7 +28,7 @@ namespace Dconf
         internal string[] Chunks {
             get
             {
-                chunks ??= GSettings.ToChunks(Path);
+                chunks ??= Utils.ToChunks(Path);
                 return chunks;
             }
         }
@@ -39,13 +42,13 @@ namespace Dconf
     {
         protected IList<Schema> schemas = [];
 
-        internal Schema(string name, string path) : base(name, path) { }
+        internal Schema(GSettings gsettings, string name, string path) : base(gsettings, name, path) { }
 
         public virtual IReadOnlyList<NodeInfo> Children { get => schemas.AsReadOnly(); }
 
         public override NodeInfo? Get(string path)
         {
-            var chunks = GSettings.ToChunks(path);
+            var chunks = Utils.ToChunks(path);
             if (chunks.Length == 0)
             {
                 return Name == string.Empty ? this : null;
@@ -62,16 +65,18 @@ namespace Dconf
             return item.Get(string.Join('.', chunks));
         }
 
-        internal static Schema BuildTree()
+        internal static Schema BuildTree(GSettings gsettings)
         {
-            var nameAndPaths = GSettings.ListSchemas(true);
+            var nameAndPaths = gsettings.ListSchemas(true);
             var schemas = nameAndPaths.Select(
-                nap => {
-                    var l = nap.Split(' ', 2);
-                    return new SchemaInfo(l[0], l[1]);
+                napStr => {
+                    var nap = napStr.Split(' ', 2);
+                    var name = nap[0];
+                    var path = nap[1];
+                    return new SchemaInfo(gsettings, name, path);
                 }
             );
-            SchemaPartInfo root = new("/");
+            SchemaPartInfo root = new(gsettings, "/");
             BuildTree(root, schemas, 0);
             return root;
         }
@@ -95,7 +100,7 @@ namespace Dconf
                         children.Add(child);
                     }
                 }
-                container ??= new SchemaPartInfo($"{parent.Path}/{group.Key}");
+                container ??= new SchemaPartInfo(parent.gsettings, $"{parent.Path}/{group.Key}");
                 parent.schemas.Add(container);
                 BuildTree(container, children, newDepth);
             }
@@ -106,15 +111,15 @@ namespace Dconf
     {
         protected IList<KeyInfo>? keys = null;
 
-        internal SchemaInfo(string name, string path) : base(name, path) { }
+        internal SchemaInfo(GSettings gsettings, string name, string path) : base(gsettings, name, path) { }
 
         public IReadOnlyList<KeyInfo> Keys
         {
             get
             {
-                keys ??= GSettings
+                keys ??= gsettings
                     .ListKeys(Name)
-                    .Select(k => new KeyInfo(Name, k, $"{Path}/{k}"))
+                    .Select(k => new KeyInfo(gsettings, Name, k, $"{Path}/{k}"))
                     .ToList();
                 return keys.ToList().AsReadOnly();
             }
@@ -125,12 +130,12 @@ namespace Dconf
 
     public class SchemaPartInfo : Schema
     {
-        internal SchemaPartInfo(string path) : base("", path) { }
+        internal SchemaPartInfo(GSettings gsettings, string path) : base(gsettings, "", path) { }
     }
 
     public class KeyInfo : NodeInfo
     {
-        internal KeyInfo(string schema, string name, string path) : base(name, path)
+        internal KeyInfo(GSettings gsettings, string schema, string name, string path) : base(gsettings, name, path)
         {
             Schema = schema;
         }

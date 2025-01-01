@@ -12,9 +12,9 @@ using System.ComponentModel;
 
 namespace Dconf
 {
-    public static class GSettings
+    public class GSettings
     {
-        internal static string[] Invoke(string[] args)
+        internal string[] Invoke(string[] args)
         {
             ProcessStartInfo startInfo = new()
             {
@@ -38,29 +38,17 @@ namespace Dconf
             return output.TrimEnd().Split("\n");
         }
 
-        public static string[] ToChunks(string path)
-        {
-            var chunks = path.Split(new char[] { '/', '.' }, StringSplitOptions.RemoveEmptyEntries);
-            return chunks.Length > 0 ? chunks : [string.Empty];
-        }
-
-        public static string Normalize(string path) => string.Join('.', ToChunks(path));
-
-        public static string GetParent(string path) => string.Join('.', ToChunks(path).SkipLast(1));
-
-        public static string GetName(string path) => ToChunks(path).Last();
-
-        public static string[] ListSchemas(bool includePaths)
+        public string[] ListSchemas(bool includePaths)
         {
             string[] args = ["list-schemas"];
             if (includePaths) { args = [.. args, "--print-paths"]; }
             return Invoke(args);
         }
 
-        public static string[] ListKeys(string path) => Invoke(["list-keys", Normalize(path)]);
+        public string[] ListKeys(string path) => Invoke(["list-keys", Utils.ToSchemaName(path)]);
 
-        public static string[] Get(string schema, string key) => Invoke(["get", schema, key]);
+        public string[] Get(string schema, string key) => Invoke(["get", schema, key]);
 
-        public static string[] Describe(string schema, string key) => Invoke(["describe", schema, key]);
+        public string[] Describe(string schema, string key) => Invoke(["describe", schema, key]);
     }
 }

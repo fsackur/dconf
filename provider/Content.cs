@@ -15,10 +15,12 @@ namespace Dconf
 {
     public class KeyReader : IContentReader
     {
+        private GSettings gsettings;
         private KeyInfo key;
         private bool isOpen;
-        internal KeyReader(KeyInfo key)
+        internal KeyReader(GSettings gsettings, KeyInfo key)
         {
+            this.gsettings = gsettings;
             this.key = key;
             isOpen = true;
         }
@@ -30,7 +32,7 @@ namespace Dconf
                 return new string[0];
             }
 
-            var value = GSettings.Get(key.Schema, key.Name);
+            var value = gsettings.Get(key.Schema, key.Name);
             isOpen = false;
             return value;
         }
@@ -47,7 +49,7 @@ namespace Dconf
         public IContentReader? GetContentReader(string path)
         {
             var item = Get(path);
-            if (!(item is KeyInfo key))
+            if (item is not KeyInfo key)
             {
                 WriteError(new ErrorRecord(
                     new InvalidOperationException($"Unable to read '{path}' because it is not a key."),
@@ -58,7 +60,7 @@ namespace Dconf
                 return null;
             }
 
-            return new KeyReader(key);
+            return new KeyReader(Drive.GSettings, key);
         }
 
         public object? GetContentReaderDynamicParameters(string path) => null;

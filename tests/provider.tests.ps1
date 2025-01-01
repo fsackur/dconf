@@ -1,10 +1,62 @@
-# BeforeAll {& (Get-Module dconf -ea Stop) {function Script:dconf {}}}
-# AfterAll {& (Get-Module dconf -ea Stop) {Remove-Item function:/dconf}}
+BeforeAll {
+    $Script:MockSchemas = @{
+        "org.gnome.mutter.wayland.keybindings /org/gnome/mutter/wayland/keybindings/" = @{
+            "restore-shortcuts" = "@as []"
+            "switch-to-session-1" = "['<Primary><Alt>F1']"
+        }
+        "org.gnome.nautilus /org/gnome/nautilus/" = @{
+        }
+        "org.gnome.mutter.keybindings /org/gnome/mutter/keybindings/" = @{
+            "cancel-input-capture" = "@as []"
+            "rotate-monitor" = "['XF86RotateWindows']"
+            "switch-monitor" = "['<Super>p', 'XF86Display']"
+        }
+        "org.gnome.mutter.wayland /org/gnome/mutter/wayland/" = @{
+            "xwayland-allow-byte-swapped-clients" = "false"
+            "xwayland-allow-grabs" = "false"
+        }
+        "org.gnome.nautilus.compression /org/gnome/nautilus/compression/" = @{
+            "default-compression-format" = "'zip'"
+        }
+        "org.gnome.mutter /org/gnome/mutter/" = @{
+            "attach-modal-dialogs" = "false"
+            "auto-maximize" = "true"
+            "center-new-windows" = "false"
+        }
+    }
+
+    class MockGSettings : Dconf.GSettings
+    {
+        [string[]] ListSchemas([bool]$includePaths)
+        {
+            $Schemas = $Script:MockSchemas.Keys
+            if (-not $includePaths)
+            {
+                $Schemas = $Schemas -replace ' .*'
+            }
+            return $Schemas
+        }
+
+        [string[]] ListKeys([string]$path)
+        {
+            $SchemaAndPath = $Script:MockSchemas.Keys -match ".* /?$path/?$"
+            return $Script:MockSchemas[$SchemaAndPath].Keys
+        }
+
+        [string[]] Get([string] $schema, [string] $key)
+        {
+            $SchemaAndPath = $Script:MockSchemas.Keys -match "^$schema .*"
+            return $Script:MockSchemas[$SchemaAndPath][$key]
+        }
+    }
+}
+
 $Global:DebugPreference = "Continue"
 
 Describe "Dconf.Provider" {
     BeforeAll {
-        $DconfDrive = New-PSDrive -Name dconf -PSProvider Dconf -Root /
+        $GSettings = [MockGSettings]::new()
+        $DconfDrive = New-PSDrive -Name dconf -PSProvider Dconf -Root / -GSettings $GSettings
     }
     AfterAll {
         Remove-PSDrive $DconfDrive

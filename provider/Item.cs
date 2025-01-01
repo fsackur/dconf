@@ -27,7 +27,7 @@ namespace Dconf
 
         protected override string[] ExpandPath(string path)
         {
-            var chunks = GSettings.ToChunks(path);
+            var chunks = Utils.ToChunks(path);
             return ExpandPath(Drive.RootNode, chunks).ToArray();
         }
 

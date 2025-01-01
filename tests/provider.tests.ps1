@@ -51,8 +51,6 @@ BeforeAll {
     }
 }
 
-$Global:DebugPreference = "Continue"
-
 Describe "Dconf.Provider" {
     BeforeAll {
         $GSettings = [MockGSettings]::new()
@@ -64,7 +62,7 @@ Describe "Dconf.Provider" {
 
     Context "Location" {
         BeforeAll {
-            $Expected = "dconf:/org/"
+            $Expected = "dconf:/org"
             Push-Location $Expected
         }
         AfterAll {Pop-Location}
@@ -77,8 +75,17 @@ Describe "Dconf.Provider" {
             Get-Item "gnome" | Should -Match "gnome"
         }
 
+        It "Gets item by wildcard" {
+            Get-Item "gn*me" | Should -Match "gnome"
+            Get-Item "gn*me/mutt*" | Should -Match "mutter"
+        }
+
         It "Gets child items" {
-            Get-ChildItem "gnome" | Where-Object Name -eq "mutter" | Should -Not -BeNullOrEmpty
+            Get-ChildItem "gnome" | Where-Object Name -eq "org.gnome.mutter" | Should -HaveCount 1
+        }
+
+        It "Gets child items by wildcard" {
+            Get-ChildItem "gnome/mutter/a*" | Should -HaveCount 2
         }
     }
 }

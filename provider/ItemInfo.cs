@@ -17,12 +17,15 @@ namespace Dconf
         {
             this.gsettings = gsettings;
             Name = name;
-            Path = path;
+            Path = Utils.Normalize(path);
+            PathFragment = Utils.ToChunks(path).LastOrDefault() ?? string.Empty;
         }
 
         public string Name { get; init; }
 
         public string Path { get; init; }
+
+        public string PathFragment { get; init; }
 
         internal string[]? chunks = null;
         internal string[] Chunks {
@@ -35,7 +38,7 @@ namespace Dconf
 
         public abstract NodeInfo? Get(string path);
 
-        public override string ToString() => Name;
+        public override string ToString() => Path;
     }
 
     public abstract class Schema : NodeInfo
@@ -48,21 +51,22 @@ namespace Dconf
 
         public override NodeInfo? Get(string path)
         {
-            var chunks = Utils.ToChunks(path);
-            if (chunks.Length == 0)
+            path = Utils.Normalize(path);
+            if (path == Path) { return this; }
+
+            string relPath;
+            if (path.StartsWith(Path))
             {
-                return Name == string.Empty ? this : null;
+                relPath = Utils.Normalize(path.Substring(Path.Length));
             }
+            else { return null; }
 
-            var chunk = chunks[0];
-            chunks = chunks[1..^0];
-
-            var item = Children.Where(i => i.Name == chunk).FirstOrDefault();
-            if (item == null) { return null; }
-
-            if (chunks.Length == 0) { return item; }
-
-            return item.Get(string.Join('.', chunks));
+            var chunk = Utils.ToChunks(relPath).First();
+            if (Children.Where(i => i.PathFragment == chunk).FirstOrDefault() is NodeInfo item)
+            {
+                return item.Get(path);
+            }
+            return null;
         }
 
         internal static Schema BuildTree(GSettings gsettings)
@@ -76,7 +80,7 @@ namespace Dconf
                     return new SchemaInfo(gsettings, name, path);
                 }
             );
-            SchemaPartInfo root = new(gsettings, "/");
+            SchemaPartInfo root = new(gsettings, "");
             BuildTree(root, schemas, 0);
             return root;
         }
@@ -142,6 +146,6 @@ namespace Dconf
 
         public string Schema { get; init; }
 
-        public override KeyInfo? Get(string path) => path == Path ? this : null;
+        public override KeyInfo? Get(string path) => Utils.Normalize(path) == Path ? this : null;
     }
 }

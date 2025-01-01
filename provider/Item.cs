@@ -44,7 +44,7 @@ namespace Dconf
 
             foreach (var child in schema.Children)
             {
-                if (child.Name == chunk || pattern.IsMatch(child.Name))
+                if (child.PathFragment == chunk || pattern.IsMatch(child.PathFragment))
                 {
                     if (chunks.Length == 0)
                     {

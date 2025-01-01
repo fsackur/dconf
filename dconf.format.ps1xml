@@ -15,6 +15,10 @@
             <Width>10</Width>
           </TableColumnHeader>
           <TableColumnHeader>
+            <Label>Path</Label>
+            <Width>20</Width>
+          </TableColumnHeader>
+          <TableColumnHeader>
             <Label>Name</Label>
           </TableColumnHeader>
         </TableHeaders>
@@ -26,14 +30,17 @@
                 <ScriptBlock>$_.GetType().Name -replace 'Info$'</ScriptBlock>
               </TableColumnItem>
               <TableColumnItem>
+                <PropertyName>PathFragment</PropertyName>
+              </TableColumnItem>
+              <TableColumnItem>
                 <ScriptBlock>
                   if ($_ -is [Dconf.SchemaPartInfo])
                   {
-                    $_.FullName + "..."
+                      ($_.Path -replace "/", ".") + "..."
                   }
                   else
                   {
-                    $_.FullName
+                      $_.Name
                   }
                 </ScriptBlock>
               </TableColumnItem>

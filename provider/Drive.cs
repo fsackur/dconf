@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Management.Automation;
 using System.Management.Automation.Provider;
 using System.Reflection;
@@ -22,18 +23,39 @@ namespace Dconf
     {
         internal class NewDriveDynamicParams
         {
-            [Parameter(DontShow = true)]
+            [Parameter(DontShow = true, ParameterSetName = "TestFixture")]  // for testing
             public GSettings? GSettings { get; set; }
+
+            [Parameter(ParameterSetName = "__AllParameterSets")]
+            public string? SchemaDir { get; set; }
         }
 
         private DriveInfo Drive { get => (DriveInfo) this.PSDriveInfo; }
 
         protected override PSDriveInfo NewDrive(PSDriveInfo drive)
         {
-            if (!(DynamicParameters is NewDriveDynamicParams dp && dp.GSettings is GSettings gsettings))
+            GSettings? gsettings = null;
+            if (DynamicParameters is NewDriveDynamicParams dp)
             {
-                gsettings = new();
+                if (dp.GSettings is GSettings)
+                {
+                    gsettings = dp.GSettings;
+                }
+                else if (dp.SchemaDir is string schemaDir)
+                {
+                    var dirs = SessionState.InvokeProvider.Item.Get(schemaDir);
+                    if (dirs.Count > 0)
+                    {
+                        PSObject dir = dirs[0];
+                        if (dir.BaseObject is DirectoryInfo dirInfo)
+                        {
+                            gsettings = new GSettings(dirInfo.FullName);
+                        }
+                    }
+                }
             }
+
+            gsettings ??= new();
             return new DriveInfo(drive, gsettings);
         }
 

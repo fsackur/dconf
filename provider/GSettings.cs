@@ -14,8 +14,18 @@ namespace Dconf
 {
     public class GSettings
     {
+        public static string DefaultSchemaDir { get => "/usr/share/glib-2.0/schemas/"; }
+
+        public GSettings() : this(DefaultSchemaDir) {}
+
+        public GSettings(string schemaDir) => SchemaDir = schemaDir;
+
+        public string SchemaDir { get; init; }
+
         internal string[] Invoke(string[] args)
         {
+            args = [ "--schemadir", SchemaDir, ..args ];
+
             ProcessStartInfo startInfo = new()
             {
                 FileName = "gsettings",

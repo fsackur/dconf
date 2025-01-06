@@ -1,11 +1,21 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Management.Automation;
+using System.Text.RegularExpressions;
 
 namespace Dconf
 {
     public partial class DconfProvider
     {
+        private bool IsTabCompleting()
+        {
+            // workaround for https://github.com/PowerShell/PowerShell/issues/24744
+            var stack = Environment.StackTrace;
+            var completerMatch = Regex.Match(stack, @"\bSystem\.Management\.Automation\.CommandCompletion\.CompleteInput\(");
+            return completerMatch.Success;
+        }
+
         private NodeInfo? Get(string path) => Drive.RootNode.Get(path);
 
         protected override bool IsValidPath(string path)
@@ -15,13 +25,21 @@ namespace Dconf
 
         protected override bool ItemExists(string path)
         {
-            return Get(path) is not null;
+            if (Get(path) is not NodeInfo item) { return false; }
+            if (item is KeyInfo && path.EndsWith('/')) { return false; }
+            return true;
         }
 
         protected override void GetItem(string path)
         {
             var item = Get(path);
             var isContainer = item is Schema;
+
+            if (!isContainer && IsTabCompleting())
+            {
+                return;
+            }
+
             WriteItemObject(item, path, isContainer);
         }
 

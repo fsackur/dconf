@@ -8,6 +8,15 @@
         <TypeName>Dconf.NodeInfo</TypeName>
       </ViewSelectedBy>
 
+      <GroupBy>
+        <Label>Path</Label>
+        <ScriptBlock>
+          "/" +
+          ($_.PSParentPath -replace "^$([regex]::Escape($_.PSProvider))::" -replace "^/") +
+          "/"
+        </ScriptBlock>
+      </GroupBy>
+
       <TableControl>
         <TableHeaders>
           <TableColumnHeader>

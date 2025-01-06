@@ -18,17 +18,19 @@
       </GroupBy>
 
       <TableControl>
+        <AutoSize/>
         <TableHeaders>
           <TableColumnHeader>
             <Label>Type</Label>
-            <Width>10</Width>
           </TableColumnHeader>
           <TableColumnHeader>
             <Label>Path</Label>
-            <Width>20</Width>
           </TableColumnHeader>
           <TableColumnHeader>
             <Label>Name</Label>
+          </TableColumnHeader>
+          <TableColumnHeader>
+            <Label>Description</Label>
           </TableColumnHeader>
         </TableHeaders>
 
@@ -52,6 +54,9 @@
                       $_.Name
                   }
                 </ScriptBlock>
+              </TableColumnItem>
+              <TableColumnItem>
+                <PropertyName>Description</PropertyName>
               </TableColumnItem>
             </TableColumnItems>
           </TableRowEntry>

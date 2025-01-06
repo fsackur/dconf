@@ -139,12 +139,23 @@ namespace Dconf
 
     public class KeyInfo : NodeInfo
     {
+        private string? description;
+
         internal KeyInfo(GSettings gsettings, string schema, string name, string path) : base(gsettings, name, path)
         {
             Schema = schema;
         }
 
         public string Schema { get; init; }
+
+        public string? Description
+        {
+            get
+            {
+                description ??= gsettings.Describe(Schema, Name).FirstOrDefault();
+                return description;
+            }
+        }
 
         public override KeyInfo? Get(string path) => Utils.Normalize(path) == Path ? this : null;
     }

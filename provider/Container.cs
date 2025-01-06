@@ -25,7 +25,9 @@ namespace Dconf
             }
         }
 
-        protected override void GetChildItems(string path, bool recurse)
+        protected override void GetChildItems(string path, bool recurse) => GetChildItems(path, recurse, uint.MaxValue);
+
+        protected override void GetChildItems(string path, bool recurse, uint depth)
         {
             if (Get(path) is not NodeInfo item) { return; }
 
@@ -41,11 +43,11 @@ namespace Dconf
                 WriteItemObject(child, child.Path, isContainer);
             }
 
-            if (!recurse) { return; }
+            if (!(recurse && depth > 0u)) { return; }
 
             foreach (var child in schema.Children.Where(child => child is Schema))
             {
-                GetChildItems(child.Path, recurse);
+                GetChildItems(child.Path, recurse, depth - 1u);
             }
         }
     }

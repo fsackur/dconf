@@ -11,11 +11,8 @@ namespace Dconf
     /// </remarks>
     public abstract class NodeInfo
     {
-        protected GSettings gsettings;
-
-        internal NodeInfo(GSettings gsettings, string name, string path)
+        internal NodeInfo(string name, string path)
         {
-            this.gsettings = gsettings;
             Name = name;
             Path = Utils.Normalize(path);
             PathFragment = Utils.ToChunks(path).LastOrDefault() ?? string.Empty;
@@ -41,11 +38,11 @@ namespace Dconf
         public override string ToString() => Path;
     }
 
-    public abstract class Schema : NodeInfo
+    public abstract partial class Schema : NodeInfo
     {
         protected IList<Schema> schemas = [];
 
-        internal Schema(GSettings gsettings, string name, string path) : base(gsettings, name, path) { }
+        internal Schema(string name, string path) : base(name, path) { }
 
         public virtual IReadOnlyList<NodeInfo> Children { get => schemas.AsReadOnly(); }
 
@@ -68,7 +65,53 @@ namespace Dconf
             }
             return null;
         }
+    }
 
+    public class SchemaInfo : Schema
+    {
+        protected IEnumerable<KeyInfo>? keys = null;
+
+        internal SchemaInfo(string name, string path) : base(name, path) { }
+
+        internal SchemaInfo(string name, string path, IEnumerable<KeyInfo> keys) : this(name, path) => this.keys = keys;
+
+        public IReadOnlyList<KeyInfo> Keys
+        {
+            get => keys.ToList().AsReadOnly();
+            // get
+            // {
+            //     keys ??= gsettings
+            //         .ListKeys(Name)
+            //         .Select(k => new KeyInfo(Name, k, $"{Path}/{k}"))
+            //         .ToList();
+            //     return keys.ToList().AsReadOnly();
+            // }
+        }
+
+        public override IReadOnlyList<NodeInfo> Children { get => schemas.Concat<NodeInfo>(Keys).ToList().AsReadOnly(); }
+    }
+
+    public class SchemaPartInfo : Schema
+    {
+        internal SchemaPartInfo(string path) : base("", path) { }
+    }
+
+    public class KeyInfo : NodeInfo
+    {
+        private string? description;
+
+        internal KeyInfo(string schema, string name, string path) : base(name, path) => Schema = schema;
+
+        public string Schema { get; init; }
+
+        public string? Description { get; init; }
+
+        public override KeyInfo? Get(string path) => Utils.Normalize(path) == Path ? this : null;
+    }
+
+
+    public partial class Schema
+    {
         internal static Schema BuildTree(GSettings gsettings)
         {
             var nameAndPaths = gsettings.ListSchemas(true);
@@ -77,10 +120,10 @@ namespace Dconf
                     var nap = napStr.Split(' ', 2);
                     var name = nap[0];
                     var path = nap[1];
-                    return new SchemaInfo(gsettings, name, path);
+                    return new SchemaInfo(name, path);
                 }
             );
-            SchemaPartInfo root = new(gsettings, "");
+            SchemaPartInfo root = new("");
             BuildTree(root, schemas, 0);
             return root;
         }
@@ -104,59 +147,10 @@ namespace Dconf
                         children.Add(child);
                     }
                 }
-                container ??= new SchemaPartInfo(parent.gsettings, $"{parent.Path}/{group.Key}");
+                container ??= new SchemaPartInfo($"{parent.Path}/{group.Key}");
                 parent.schemas.Add(container);
                 BuildTree(container, children, newDepth);
             }
         }
-    }
-
-    public class SchemaInfo : Schema
-    {
-        protected IList<KeyInfo>? keys = null;
-
-        internal SchemaInfo(GSettings gsettings, string name, string path) : base(gsettings, name, path) { }
-
-        public IReadOnlyList<KeyInfo> Keys
-        {
-            get
-            {
-                keys ??= gsettings
-                    .ListKeys(Name)
-                    .Select(k => new KeyInfo(gsettings, Name, k, $"{Path}/{k}"))
-                    .ToList();
-                return keys.ToList().AsReadOnly();
-            }
-        }
-
-        public override IReadOnlyList<NodeInfo> Children { get => schemas.Concat<NodeInfo>(Keys).ToList().AsReadOnly(); }
-    }
-
-    public class SchemaPartInfo : Schema
-    {
-        internal SchemaPartInfo(GSettings gsettings, string path) : base(gsettings, "", path) { }
-    }
-
-    public class KeyInfo : NodeInfo
-    {
-        private string? description;
-
-        internal KeyInfo(GSettings gsettings, string schema, string name, string path) : base(gsettings, name, path)
-        {
-            Schema = schema;
-        }
-
-        public string Schema { get; init; }
-
-        public string? Description
-        {
-            get
-            {
-                description ??= gsettings.Describe(Schema, Name).FirstOrDefault();
-                return description;
-            }
-        }
-
-        public override KeyInfo? Get(string path) => Utils.Normalize(path) == Path ? this : null;
     }
 }

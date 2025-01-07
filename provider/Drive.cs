@@ -2,6 +2,7 @@
 using System.IO;
 using System.Management.Automation;
 using System.Management.Automation.Provider;
+using System.Collections.Generic;
 using System.Reflection;
 
 namespace Dconf
@@ -27,7 +28,7 @@ namespace Dconf
             public GSettings? GSettings { get; set; }
 
             [Parameter(ParameterSetName = "__AllParameterSets")]
-            public string? SchemaDir { get; set; }
+            public string[]? SchemaDir { get; set; }
         }
 
         private DriveInfo Drive { get => (DriveInfo) this.PSDriveInfo; }
@@ -35,23 +36,38 @@ namespace Dconf
         protected override PSDriveInfo NewDrive(PSDriveInfo drive)
         {
             GSettings? gsettings = null;
+            List<string> schemaDirs = new() { GSettings.DefaultSchemaDir, GSettings.DefaultUserExtensionSchemaDir };
+
             if (DynamicParameters is NewDriveDynamicParams dp)
             {
                 if (dp.GSettings is GSettings)
                 {
                     gsettings = dp.GSettings;
                 }
-                else if (dp.SchemaDir is string schemaDir)
+
+                if (dp.SchemaDir is string[] sDirs)
                 {
-                    var dirs = SessionState.InvokeProvider.Item.Get(schemaDir);
-                    if (dirs.Count > 0)
+                    foreach (var sDir in sDirs)
                     {
-                        PSObject dir = dirs[0];
-                        if (dir.BaseObject is DirectoryInfo dirInfo)
+                        var psDirs = SessionState.InvokeProvider.Item.Get(sDir);
+                        foreach (var psobject in psDirs)
                         {
-                            gsettings = new GSettings(dirInfo.FullName);
+                            if (psobject.BaseObject is DirectoryInfo dirInfo)
+                            {
+                                schemaDirs.Add(dirInfo.FullName);
+                            }
                         }
                     }
+                }
+            }
+
+            List<string> schemaFiles = new();
+            var psFiles = SessionState.InvokeCommand.InvokeScript($"Get-ChildItem {string.Join(',', schemaDirs)} -File -Filter '*.gschema.xml'");
+            foreach (var psobject in psFiles)
+            {
+                if (psobject.BaseObject is FileInfo fileInfo)
+                {
+                    schemaFiles.Add(fileInfo.FullName);
                 }
             }
 

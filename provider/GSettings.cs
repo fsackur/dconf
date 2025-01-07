@@ -9,6 +9,7 @@ using System.Management.Automation;
 using System.Management.Automation.Provider;
 using System.Text.RegularExpressions;
 using System.ComponentModel;
+using System.Xml;
 
 namespace Dconf
 {
@@ -16,11 +17,25 @@ namespace Dconf
     {
         public static string DefaultSchemaDir { get => "/usr/share/glib-2.0/schemas/"; }
 
+        public static string DefaultUserExtensionSchemaDir
+        {
+            get => Path.Combine(
+                System.Environment.GetFolderPath(System.Environment.SpecialFolder.UserProfile),
+                ".local/share/gnome-shell/extensions/*/schemas"
+            );
+        }
+
         public GSettings() : this(DefaultSchemaDir) {}
 
         public GSettings(string schemaDir) => SchemaDir = schemaDir;
 
+        // public GSettings(GSchemaXmlParser parser) : this() => Parser = parser;
+
         public string SchemaDir { get; init; }
+
+        // TODO: resolve paths
+        // private GSchemaXmlParser? parser = null;
+        // public GSchemaXmlParser Parser { get => { parser ??= new([ SchemaDir ]); return parser; } }
 
         internal string[] Invoke(string[] args)
         {
@@ -60,5 +75,39 @@ namespace Dconf
         public string[] Get(string schema, string key) => Invoke(["get", schema, key]);
 
         public string[] Describe(string schema, string key) => Invoke(["describe", schema, key]);
+    }
+
+    public class GSchemaXmlParser
+    {
+        // public static IEnumerable<Schema> Parse(string path)
+        // {
+        //     List<Schema> schemas = new();
+        //     XmlDocument x = new();
+        //     x.Load(path);
+        //     foreach (var schema in x.DocumentElement.SelectNodes("schema"))
+        //     {
+        //         schemas.Add(new Schema(schema.))
+        //     }
+        // }
+
+        public GSchemaXmlParser(IEnumerable<string> schemaFiles) => SchemaFiles = schemaFiles;
+
+        public IEnumerable<string> SchemaFiles { get; init; }
+
+        public IEnumerable<XmlDocument> Xml
+        {
+            get => SchemaFiles.Select(path => {
+                XmlDocument x = new();
+                x.Load(path);
+                return x;
+            });
+        }
+
+        // public IEnumerable<Schema> Schemas
+        // {
+        //     get => Xml.Select(x => {
+
+        //     });
+        // }
     }
 }

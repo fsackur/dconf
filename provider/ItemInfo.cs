@@ -75,20 +75,9 @@ namespace Dconf
 
         internal SchemaInfo(string name, string path, IEnumerable<KeyInfo> keys) : this(name, path) => this.keys = keys;
 
-        public IReadOnlyList<KeyInfo> Keys
-        {
-            get => keys.ToList().AsReadOnly();
-            // get
-            // {
-            //     keys ??= gsettings
-            //         .ListKeys(Name)
-            //         .Select(k => new KeyInfo(Name, k, $"{Path}/{k}"))
-            //         .ToList();
-            //     return keys.ToList().AsReadOnly();
-            // }
-        }
+        public IReadOnlyList<KeyInfo>? Keys { get => keys?.ToList().AsReadOnly(); }
 
-        public override IReadOnlyList<NodeInfo> Children { get => schemas.Concat<NodeInfo>(Keys).ToList().AsReadOnly(); }
+        public override IReadOnlyList<NodeInfo> Children { get => schemas.Concat<NodeInfo>(Keys ?? new KeyInfo[0]).ToList().AsReadOnly(); }
     }
 
     public class SchemaPartInfo : Schema
@@ -98,29 +87,27 @@ namespace Dconf
 
     public class KeyInfo : NodeInfo
     {
-        private string? description;
-
-        internal KeyInfo(string schema, string name, string path) : base(name, path) => Schema = schema;
-
-        internal KeyInfo(string name, string path, string type, string default, string summary, string description) :
-            base(name, path)
+        internal KeyInfo(
+            string schema, string name, string path,
+            Type? type = null, string? _default = null,
+            string? summary = null, string? description = null) : base(name, path)
         {
-            // name: name,
-            // path: $"{path}{name}",
-            // type: xmlKey.GetAttribute("type"),
-            // default: xmlKey.SelectSingleNode("default").InnerText,
-            // summary: xmlKey.SelectSingleNode("summary").InnerText,
-            // description: xmlKey.SelectSingleNode("description").InnerText,
+            Schema = schema;
+            Type = type!;
+            Summary = summary!;
+            Description = description!;
         }
 
-
         public string Schema { get; init; }
+
+        public Type? Type { get; init; }
+
+        public string? Summary { get; init; }
 
         public string? Description { get; init; }
 
         public override KeyInfo? Get(string path) => Utils.Normalize(path) == Path ? this : null;
     }
-
 
     public partial class Schema
     {

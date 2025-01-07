@@ -29,13 +29,7 @@ namespace Dconf
 
         public GSettings(string schemaDir) => SchemaDir = schemaDir;
 
-        // public GSettings(GSchemaXmlParser parser) : this() => Parser = parser;
-
         public string SchemaDir { get; init; }
-
-        // TODO: resolve paths
-        // private GSchemaXmlParser? parser = null;
-        // public GSchemaXmlParser Parser { get => { parser ??= new([ SchemaDir ]); return parser; } }
 
         internal string[] Invoke(string[] args)
         {
@@ -75,67 +69,5 @@ namespace Dconf
         public string[] Get(string schema, string key) => Invoke(["get", schema, key]);
 
         public string[] Describe(string schema, string key) => Invoke(["describe", schema, key]);
-    }
-
-    public class GSchemaXmlParser
-    {
-        public static IEnumerable<Schema> Parse(string path)
-        {
-            List<Schema> schemas = new();
-            XmlDocument x = new();
-            x.Load(path);
-            XmlElement root = x.DocumentElement;
-
-            foreach (XmlNode xmlSchema in root.SelectNodes("schema"))
-            {
-                string id = xmlSchema.GetAttribute("id");
-                string path = xmlSchema.GetAttribute("path");
-
-                List<KeyInfo> keys = new();
-                foreach (XmlNode xmlKey in xmlSchema.SelectNodes("key"))
-                {
-                    string name = xmlKey.GetAttribute("name");
-                    string typeName = xmlKey.GetAttribute("type");
-                    if (typeName is string.Empty)
-                    {
-                        string enumName = xmlKey.GetAttribute("enum");
-                        var values = root.SelectNodes($"enum[@id='{enumName}']/value/@nick");
-                    }
-
-                    KeyInfo key = new(
-                        name: name,
-                        path: $"{path}{name}",
-                        type: type,
-                        default: xmlKey.SelectSingleNode("default").InnerText,
-                        summary: xmlKey.SelectSingleNode("summary").InnerText,
-                        description: xmlKey.SelectSingleNode("description").InnerText,
-                    )
-                    string name = xmlKey.name;
-                }
-                // SchemaInfo schema = new()
-                // schemas.Add(new Schema(schema.))
-            }
-            return schemas;
-        }
-
-        public GSchemaXmlParser(IEnumerable<string> schemaFiles) => SchemaFiles = schemaFiles;
-
-        public IEnumerable<string> SchemaFiles { get; init; }
-
-        public IEnumerable<XmlDocument> Xml
-        {
-            get => SchemaFiles.Select(path => {
-                XmlDocument x = new();
-                x.Load(path);
-                return x;
-            });
-        }
-
-        // public IEnumerable<Schema> Schemas
-        // {
-        //     get => Xml.Select(x => {
-
-        //     });
-        // }
     }
 }

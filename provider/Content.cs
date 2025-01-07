@@ -18,9 +18,9 @@ namespace Dconf
         private GSettings gsettings;
         private KeyInfo key;
         private bool isOpen;
-        internal KeyReader(GSettings gsettings, KeyInfo key)
+        internal KeyReader(KeyInfo key)
         {
-            this.gsettings = gsettings;
+            this.gsettings = key.GSettings;
             this.key = key;
             isOpen = true;
         }
@@ -60,7 +60,7 @@ namespace Dconf
                 return null;
             }
 
-            return new KeyReader(Drive.GSettings, key);
+            return new KeyReader(key);
         }
 
         public object? GetContentReaderDynamicParameters(string path) => null;

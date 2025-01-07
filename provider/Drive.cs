@@ -10,13 +10,12 @@ namespace Dconf
     internal class DriveInfo : PSDriveInfo
     {
         private Schema? rootNode = null;
-        internal Schema RootNode { get { rootNode ??= Schema.BuildTree(GSettings); return rootNode; } }
-        public DriveInfo(PSDriveInfo driveInfo, GSettings gsettings) : base(driveInfo)
-        {
-            GSettings = gsettings;
-        }
 
-        public GSettings GSettings { get; init; }
+        internal Schema RootNode { get { rootNode ??= Schema.BuildTree(Parser); return rootNode; } }
+
+        public DriveInfo(PSDriveInfo driveInfo, GSchemaXmlParser parser) : base(driveInfo) => Parser = parser;
+
+        private GSchemaXmlParser Parser { get; init; }
     }
 
     [CmdletProvider("Dconf", ProviderCapabilities.ExpandWildcards)]
@@ -71,8 +70,8 @@ namespace Dconf
                 }
             }
 
-            gsettings ??= new();
-            return new DriveInfo(drive, gsettings);
+            GSchemaXmlParser parser = new(schemaFiles);
+            return new DriveInfo(drive, parser);
         }
 
         protected override object NewDriveDynamicParameters() => new NewDriveDynamicParams();

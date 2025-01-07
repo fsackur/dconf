@@ -7,11 +7,11 @@ namespace Dconf
 {
     public class GSchemaXmlParser
     {
-        public static IEnumerable<Schema> Parse(string path)
+        public static IEnumerable<Schema> Parse(string filePath)
         {
             List<Schema> schemas = new();
             XmlDocument x = new();
-            x.Load(path);
+            x.Load(filePath);
             XmlElement root = x.DocumentElement!;
 
             foreach (XmlElement xmlSchema in root.SelectNodes("schema")!)
@@ -64,6 +64,7 @@ namespace Dconf
                         schema: schemaName,
                         name: name,
                         path: $"{schemaPath}{name}",
+                        schemaFile: filePath,
                         type: type,
                         _default: xmlKey.SelectSingleNode("default")?.InnerText,
                         summary: xmlKey.SelectSingleNode("summary")?.InnerText,
@@ -72,7 +73,12 @@ namespace Dconf
                     keys.Add(key);
                 }
 
-                SchemaInfo schema = new(schemaName, schemaPath, keys);
+                SchemaInfo schema = new(
+                    name: schemaName,
+                    path: schemaPath,
+                    schemaFile: filePath,
+                    keys: keys
+                );
                 schemas.Add(schema);
             }
             return schemas;

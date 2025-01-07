@@ -67,13 +67,19 @@ namespace Dconf
         }
     }
 
-    public class SchemaInfo : Schema
+    public class SchemaInfo : Schema, IGSettings
     {
         protected IEnumerable<KeyInfo>? keys = null;
 
-        internal SchemaInfo(string name, string path) : base(name, path) { }
+        internal SchemaInfo(string name, string path, string schemaFile, IEnumerable<KeyInfo> keys) : base(name, path)
+        {
+            SchemaFile = schemaFile;
+            this.keys = keys;
+        }
 
-        internal SchemaInfo(string name, string path, IEnumerable<KeyInfo> keys) : this(name, path) => this.keys = keys;
+        public string SchemaFile { get; init; }
+
+        public GSettings GSettings { get => ((IGSettings)this).GSettings; }
 
         public IReadOnlyList<KeyInfo>? Keys { get => keys?.ToList().AsReadOnly(); }
 
@@ -85,18 +91,29 @@ namespace Dconf
         internal SchemaPartInfo(string path) : base("", path) { }
     }
 
-    public class KeyInfo : NodeInfo
+    public class KeyInfo : NodeInfo, IGSettings
     {
         internal KeyInfo(
-            string schema, string name, string path,
-            Type? type = null, string? _default = null,
-            string? summary = null, string? description = null) : base(name, path)
+            string schema,
+            string name,
+            string path,
+            string schemaFile,
+            Type? type = null,
+            string? _default = null,
+            string? summary = null,
+            string? description = null
+        ) : base(name, path)
         {
+            SchemaFile = schemaFile;
             Schema = schema;
             Type = type!;
             Summary = summary!;
             Description = description!;
         }
+
+        public string SchemaFile { get; init; }
+
+        public GSettings GSettings { get => ((IGSettings)this).GSettings; }
 
         public string Schema { get; init; }
 
@@ -111,17 +128,9 @@ namespace Dconf
 
     public partial class Schema
     {
-        internal static Schema BuildTree(GSettings gsettings)
+        internal static Schema BuildTree(GSchemaXmlParser parser)
         {
-            var nameAndPaths = gsettings.ListSchemas(true);
-            var schemas = nameAndPaths.Select(
-                napStr => {
-                    var nap = napStr.Split(' ', 2);
-                    var name = nap[0];
-                    var path = nap[1];
-                    return new SchemaInfo(name, path);
-                }
-            );
+            var schemas = parser.GetSchemas();
             SchemaPartInfo root = new("");
             BuildTree(root, schemas, 0);
             return root;

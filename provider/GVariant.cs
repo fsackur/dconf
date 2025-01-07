@@ -3,6 +3,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Reflection;
+using System.Reflection.Emit;
 
 namespace Dconf
 {
@@ -124,6 +126,56 @@ namespace Dconf
             Debug.Assert(type != typeof(Sentinel), "We should not have sentinel values here");
             Debug.Assert(!charEnum.MoveNext(), "We should have consumed all chars");
             return type;
+        }
+    }
+
+    public class GEnumBuilder
+    {
+        private static ModuleBuilder? module;
+
+        protected static ModuleBuilder Module
+        {
+            get
+            {
+                if (module is not ModuleBuilder)
+                {
+                    string name = "Dconf.Dynamic";
+                    var assemblyName = new AssemblyName(name);
+                    var ab = AssemblyBuilder.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.Run);
+                    module = ab.DefineDynamicModule(assemblyName.Name!);
+                }
+                return module;
+            }
+        }
+
+        public static Type BuildEnum(string name, IEnumerable<KeyValuePair<string, int>> members, bool isFlags = false)
+        {
+            EnumBuilder eb = Module.DefineEnum(name, TypeAttributes.Public, typeof(int));
+            foreach (var kvp in members)
+            {
+                eb.DefineLiteral(kvp.Key, kvp.Value);
+            }
+
+            if (isFlags)
+            {
+                Type flagType = typeof(FlagsAttribute);
+                var flagCtor = flagType.GetConstructor(new Type[0]);
+                eb.SetCustomAttribute(flagCtor!, new byte[0]);
+            }
+
+            return eb.CreateType();
+        }
+
+        public static Type BuildEnum(string name, IEnumerable<string> members, bool isFlags = false)
+        {
+            Dictionary<string, int> memberDict = new(members.Count());
+            var i = 0;
+            foreach (string member in members)
+            {
+                memberDict.Add(member, i);
+                i++;
+            }
+            return BuildEnum(name, memberDict, isFlags);
         }
     }
 }

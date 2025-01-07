@@ -79,16 +79,44 @@ namespace Dconf
 
     public class GSchemaXmlParser
     {
-        // public static IEnumerable<Schema> Parse(string path)
-        // {
-        //     List<Schema> schemas = new();
-        //     XmlDocument x = new();
-        //     x.Load(path);
-        //     foreach (var schema in x.DocumentElement.SelectNodes("schema"))
-        //     {
-        //         schemas.Add(new Schema(schema.))
-        //     }
-        // }
+        public static IEnumerable<Schema> Parse(string path)
+        {
+            List<Schema> schemas = new();
+            XmlDocument x = new();
+            x.Load(path);
+            XmlElement root = x.DocumentElement;
+
+            foreach (XmlNode xmlSchema in root.SelectNodes("schema"))
+            {
+                string id = xmlSchema.GetAttribute("id");
+                string path = xmlSchema.GetAttribute("path");
+
+                List<KeyInfo> keys = new();
+                foreach (XmlNode xmlKey in xmlSchema.SelectNodes("key"))
+                {
+                    string name = xmlKey.GetAttribute("name");
+                    string typeName = xmlKey.GetAttribute("type");
+                    if (typeName is string.Empty)
+                    {
+                        string enumName = xmlKey.GetAttribute("enum");
+                        var values = root.SelectNodes($"enum[@id='{enumName}']/value/@nick");
+                    }
+
+                    KeyInfo key = new(
+                        name: name,
+                        path: $"{path}{name}",
+                        type: type,
+                        default: xmlKey.SelectSingleNode("default").InnerText,
+                        summary: xmlKey.SelectSingleNode("summary").InnerText,
+                        description: xmlKey.SelectSingleNode("description").InnerText,
+                    )
+                    string name = xmlKey.name;
+                }
+                // SchemaInfo schema = new()
+                // schemas.Add(new Schema(schema.))
+            }
+            return schemas;
+        }
 
         public GSchemaXmlParser(IEnumerable<string> schemaFiles) => SchemaFiles = schemaFiles;
 

@@ -102,6 +102,18 @@ namespace Dconf
 
         internal KeyInfo(string schema, string name, string path) : base(name, path) => Schema = schema;
 
+        internal KeyInfo(string name, string path, string type, string default, string summary, string description) :
+            base(name, path)
+        {
+            // name: name,
+            // path: $"{path}{name}",
+            // type: xmlKey.GetAttribute("type"),
+            // default: xmlKey.SelectSingleNode("default").InnerText,
+            // summary: xmlKey.SelectSingleNode("summary").InnerText,
+            // description: xmlKey.SelectSingleNode("description").InnerText,
+        }
+
+
         public string Schema { get; init; }
 
         public string? Description { get; init; }

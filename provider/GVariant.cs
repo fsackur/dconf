@@ -148,8 +148,50 @@ namespace Dconf
             }
         }
 
+        private static Type? GetExistingEnum(string name, IEnumerable<KeyValuePair<string, int>> members, bool isFlags = false)
+        {
+            if (Module.GetType(name) is not Type type)
+            {
+                return null;
+            }
+
+            var memberDict = new Dictionary<string, int>(members);
+            var enumValues = Enum.GetValues(type);
+
+            bool definitionsMatch = true;
+            foreach (var enumValue in enumValues)
+            {
+                bool valueMatches =
+                    memberDict.TryGetValue(enumValue.ToString()!, out int paramValue) &&
+                    (int)enumValue == paramValue;
+
+                if (!valueMatches) { definitionsMatch = false; break; }
+            }
+
+            definitionsMatch =
+                definitionsMatch &&
+                enumValues.Length == members.Count() &&
+                isFlags == type.GetCustomAttributes(false).Any(a => a is FlagsAttribute);
+
+            if (definitionsMatch)
+            {
+                return type;
+            }
+            else
+            {
+                throw new InvalidOperationException(
+                    $"Cannot create enum '{name}'; type already exists and does not match provided definition."
+                );
+            }
+        }
+
         public static Type BuildEnum(string name, IEnumerable<KeyValuePair<string, int>> members, bool isFlags = false)
         {
+            if (GetExistingEnum(name, members, isFlags) is Type type)
+            {
+                return type;
+            }
+
             EnumBuilder eb = Module.DefineEnum(name, TypeAttributes.Public, typeof(int));
             foreach (var kvp in members)
             {
@@ -158,8 +200,7 @@ namespace Dconf
 
             if (isFlags)
             {
-                Type flagType = typeof(FlagsAttribute);
-                var flagCtor = flagType.GetConstructor(new Type[0]);
+                var flagCtor = typeof(FlagsAttribute).GetConstructor(new Type[0]);
                 eb.SetCustomAttribute(flagCtor!, new byte[0]);
             }
 

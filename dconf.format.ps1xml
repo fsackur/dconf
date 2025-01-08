@@ -30,7 +30,7 @@
             <Label>Name</Label>
           </TableColumnHeader>
           <TableColumnHeader>
-            <Label>Description</Label>
+            <Label>Summary</Label>
           </TableColumnHeader>
         </TableHeaders>
 
@@ -56,7 +56,7 @@
                 </ScriptBlock>
               </TableColumnItem>
               <TableColumnItem>
-                <PropertyName>Description</PropertyName>
+                <PropertyName>Summary</PropertyName>
               </TableColumnItem>
             </TableColumnItems>
           </TableRowEntry>

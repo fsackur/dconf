@@ -13,6 +13,18 @@ namespace Dconf
 
     public class GSchemaXmlParser
     {
+        internal static string? FormatDescription(string? description)
+        {
+            if (description == null) { return null; }
+
+            var pattern = new Regex(@"\n\s*");
+            var paragraphs = description
+                .Split("\n\n")
+                .Select(s => s.Trim())
+                .Select(s => pattern.Replace(s, " "));
+            return string.Join("\n\n", paragraphs);
+        }
+
         public static IEnumerable<Schema> Parse(string filePath)
         {
             List<Schema> schemas = new();
@@ -74,7 +86,7 @@ namespace Dconf
                         type: type,
                         _default: xmlKey.SelectSingleNode("default")?.InnerText,
                         summary: xmlKey.SelectSingleNode("summary")?.InnerText,
-                        description: xmlKey.SelectSingleNode("description")?.InnerText
+                        description: FormatDescription(xmlKey.SelectSingleNode("description")?.InnerText)
                     );
                     keys.Add(key);
                 }

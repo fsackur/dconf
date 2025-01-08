@@ -16,12 +16,20 @@ namespace Dconf
     public class KeyReader : IContentReader
     {
         private GSettings gsettings;
+
         private KeyInfo key;
+
         private bool isOpen;
+
         internal KeyReader(KeyInfo key)
         {
-            this.gsettings = key.GSettings;
             this.key = key;
+            var schemaFile = key.SchemaFile;
+            gsettings = schemaFile switch
+            {
+                null => new GSettings(),
+                _ => new GSettings(Path.GetDirectoryName(schemaFile)!)
+            };
             isOpen = true;
         }
 

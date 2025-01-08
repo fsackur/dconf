@@ -2,9 +2,15 @@ using System;
 using System.Collections.Generic;
 using System.Xml;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace Dconf
 {
+    public interface IGSchemaNode
+    {
+        public string SchemaFile { get; }
+    }
+
     public class GSchemaXmlParser
     {
         public static IEnumerable<Schema> Parse(string filePath)

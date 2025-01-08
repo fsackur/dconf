@@ -13,13 +13,6 @@ using System.Xml;
 
 namespace Dconf
 {
-    public interface IGSettings
-    {
-        public string SchemaFile { get; }
-
-        public GSettings GSettings { get => new GSettings(SchemaFile); }
-    }
-
     public class GSettings
     {
         public static string DefaultSchemaDir { get => "/usr/share/glib-2.0/schemas/"; }

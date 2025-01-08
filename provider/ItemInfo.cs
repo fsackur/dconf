@@ -67,7 +67,7 @@ namespace Dconf
         }
     }
 
-    public class SchemaInfo : Schema, IGSettings
+    public class SchemaInfo : Schema, IGSchemaNode
     {
         protected IEnumerable<KeyInfo>? keys = null;
 
@@ -79,8 +79,6 @@ namespace Dconf
 
         public string SchemaFile { get; init; }
 
-        public GSettings GSettings { get => ((IGSettings)this).GSettings; }
-
         public IReadOnlyList<KeyInfo>? Keys { get => keys?.ToList().AsReadOnly(); }
 
         public override IReadOnlyList<NodeInfo> Children { get => schemas.Concat<NodeInfo>(Keys ?? new KeyInfo[0]).ToList().AsReadOnly(); }
@@ -91,7 +89,7 @@ namespace Dconf
         internal SchemaPartInfo(string path) : base("", path) { }
     }
 
-    public class KeyInfo : NodeInfo, IGSettings
+    public class KeyInfo : NodeInfo, IGSchemaNode
     {
         internal KeyInfo(
             string schema,
@@ -112,8 +110,6 @@ namespace Dconf
         }
 
         public string SchemaFile { get; init; }
-
-        public GSettings GSettings { get => ((IGSettings)this).GSettings; }
 
         public string Schema { get; init; }
 

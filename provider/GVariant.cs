@@ -381,7 +381,7 @@ namespace Dconf
                 type = eb.CreateType();
             }
 
-            return new GEnum(type);
+            return isFlags ? new GFlagsEnum(type) : new GEnum(type);
         }
 
         public static GEnum Build(string name, IEnumerable<string> members)
@@ -396,25 +396,37 @@ namespace Dconf
             return Build(name, memberDict, false);
         }
 
-        protected GEnum(Type managedType)
-        {
-            ManagedType = managedType;
-        }
+        public GEnum(Type managedType) => ManagedType = managedType;
 
         public Type ManagedType { get; init; }
 
-        public object? Deserialize(string encoded)
+        public virtual object? Deserialize(string encoded)
         {
-            string[] encodedArray = IsFlags(this)
-                ? GVariantUtils.SplitEncodedArray(Regex.Replace(encoded, @"^@as\s+", ""))
-                : [ encoded ];
-
-            var unquote = GVariantUtils.Unquote;
-            string names = string.Join(',', encodedArray.Select(unquote));
-
-            return Enum.TryParse(ManagedType, names, out object? result)
+            string name = GVariantUtils.Unquote(encoded);
+            return Enum.TryParse(ManagedType, name, out object? result)
                 ? result
-                : throw new ParseException($"{names} is not a valid case for {ManagedType}");
+                : throw new ParseException($"{name} is not a valid case for {ManagedType}");
+        }
+    }
+
+    public class GFlagsEnum : GEnum
+    {
+        public GFlagsEnum(Type managedType) : base(managedType) {}
+
+        public override object? Deserialize(string encoded)
+        {
+            encoded = Regex.Replace(encoded, @"^@as\s+", "");
+            string[] encodedArray = GVariantUtils.SplitEncodedArray(encoded);
+
+            var names = encodedArray.Select(GVariantUtils.Unquote);
+            foreach (string n in names)
+            {
+                if (!Enum.TryParse(ManagedType, n, out _))
+                {
+                    throw new ParseException($"{n} is not a valid case for {ManagedType}");
+                }
+            }
+            return Enum.Parse(ManagedType, string.Join(',', names));
         }
     }
 }

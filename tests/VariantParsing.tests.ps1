@@ -2,7 +2,6 @@ using namespace System.Collections.Generic;
 
 BeforeDiscovery {
     $TestData = @{
-        "" = [void]
         "()" = [Tuple]
         "y" = [char]
         "x" = [Int64]
@@ -64,8 +63,8 @@ BeforeDiscovery {
 Describe "Dconf.GVariantParser" {
     Context "Parsing" {
         It "Parses a type string: '<TypeString>'" -ForEach $TestCases {
-            $Result = [Dconf.GVariantParser]::ParseTypeString($TypeString)
-            $Result | Should -Be $Expected
+            $Result = [Dconf.GVariantParser]::Parse($TypeString)
+            $Result.ManagedType | Should -Be $Expected
         }
     }
 }
@@ -73,18 +72,17 @@ Describe "Dconf.GVariantParser" {
 Describe "Dconf.GEnumBuilder" {
     It "Builds an enum" {
         [string[]]$Members = "Foo", "Bar"
-        $Result = [Dconf.GEnumBuilder]::BuildEnum(
+        $Result = [Dconf.GEnum]::Build(
             "FooEnum",
-            $Members,
-            $false
-        )
+            $Members
+        ).ManagedType
 
         $Result.Name | Should -Be "FooEnum"
         $Result.IsAssignableTo([Enum]) | Should -BeTrue
         [string[]][Enum]::GetValues($Result) | Should -BeExactly $Members
-        [int][FooEnum]::Foo | Should -Be 0
-        [int][FooEnum]::Bar | Should -Be 1
-        [FooEnum]"Foo, Bar" | Should -Not -Match "Foo, Bar"
+        [int]$Result::Foo | Should -Be 0
+        [int]$Result::Bar | Should -Be 1
+        "Foo, Bar" -as $Result | Should -Not -Match "Foo, Bar"
         $Result.GetCustomAttributes($true) | Should -BeNullOrEmpty
     }
 
@@ -93,18 +91,18 @@ Describe "Dconf.GEnumBuilder" {
         $Members.Add("Foo", 1)
         $Members.Add("Bar", 8)
 
-        $Result = [Dconf.GEnumBuilder]::BuildEnum(
+        $Result = [Dconf.GEnum]::Build(
             "BarEnum",
             $Members,
             $true
-        )
+        ).ManagedType
 
         $Result.Name | Should -Be "BarEnum"
         $Result.IsAssignableTo([Enum]) | Should -BeTrue
         [string[]][Enum]::GetValues($Result) | Sort-Object | Should -BeExactly ($Members.Keys | Sort-Object)
-        [int][BarEnum]::Foo | Should -Be 1
-        [int][BarEnum]::Bar | Should -Be 8
-        [int][BarEnum]"Foo, Bar" | Should -Be 9
+        [int]$Result::Foo | Should -Be 1
+        [int]$Result::Bar | Should -Be 8
+        "Foo, Bar" -as $Result -as [int] | Should -Be 9
         $Result.GetCustomAttributes($true) | Should -Match "Flags"
     }
 }

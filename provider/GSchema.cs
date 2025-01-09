@@ -42,10 +42,10 @@ namespace Dconf
                 {
                     string name = xmlKey.GetAttribute("name");
                     string typeString = xmlKey.GetAttribute("type");
-                    Type type;
+                    GVariant type;
                     if (typeString != string.Empty)
                     {
-                        type = GVariantParser.ParseTypeString(typeString);
+                        type = GVariantParser.Parse(typeString);
                     }
                     else
                     {
@@ -75,7 +75,7 @@ namespace Dconf
                             var value = int.Parse(element.GetAttribute("value"));
                             members.Add(nick, value);
                         }
-                        type = GEnumBuilder.BuildEnum(enumName, members, isFlags);
+                        type = GEnum.Build(enumName, members, isFlags);
                     }
 
                     KeyInfo key = new(

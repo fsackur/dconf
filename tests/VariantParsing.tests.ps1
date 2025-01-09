@@ -64,7 +64,7 @@ BeforeDiscovery {
 Describe "Dconf.GVariantParser" {
     Context "Parsing" {
         It "Parses a type string: '<TypeString>'" -ForEach $TestCases {
-            $Result = [Dconf.GVariantParser]::Parse($TypeString)
+            $Result = [Dconf.GVariantParser]::ParseTypeString($TypeString)
             $Result | Should -Be $Expected
         }
     }

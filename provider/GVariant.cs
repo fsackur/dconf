@@ -9,6 +9,10 @@ using System.Text.RegularExpressions;
 
 namespace Dconf
 {
+    internal class ParsingFailed : Exception {
+        internal ParsingFailed(string msg) : base(msg) {}
+    }
+
     public struct Maybe<T>
     {
         public static Maybe<T> None => default;
@@ -30,7 +34,12 @@ namespace Dconf
         }
     }
 
-    public class GPrimitive
+    public interface GVariant
+    {
+        public abstract object? Deserialize(string encoded);
+    }
+
+    public class GPrimitive : GVariant
     {
         private readonly static Dictionary<char, GPrimitive> _primitives;
 
@@ -44,6 +53,7 @@ namespace Dconf
                         Type,
                         Func<string, object>>> primMembers =
             new() {
+                // https://docs.gtk.org/glib/gvariant-format-strings.html
                 new('b', typeof(Boolean), s => Boolean.Parse(s)),
                 new('y', typeof(Char), s => Char.Parse(s)),
                 new('n', typeof(Int16), s => Int16.Parse(s)),
@@ -61,7 +71,7 @@ namespace Dconf
             };
 
             _primitives = new(
-                primMembers.Select<GPrimitive>(args => new GPrimitive(
+                primMembers.Select(args => new GPrimitive(
                                 gChar: args.Item1,
                                 type: args.Item2,
                                 deserializer: args.Item3))
@@ -69,48 +79,41 @@ namespace Dconf
             );
         }
 
-        public GPrimitive(char gChar, Type type, Func<string, object> deserializer)
+        public static Type ParseTypeChar(char gChar)
+        {
+            return _primitives.TryGetValue(gChar, out GPrimitive? prim)
+                ? prim.ManagedType
+                : throw new ParsingFailed($"Not a primitive: {gChar}");
+        }
+
+        public static object? ToManagedType(char gChar, string encodedValue)
+        {
+            return _primitives.TryGetValue(gChar, out GPrimitive? prim)
+                ? prim.Deserialize(encodedValue)
+                : null;
+        }
+
+        private Func<string, object?> deserializer;
+
+        public GPrimitive(char gChar, Type type, Func<string, object?> deserializer)
         {
             GChar = gChar;
             ManagedType = type;
-            Deserialize = deserializer;
+            this.deserializer = deserializer;
         }
 
         public char GChar { get; init; }
 
         public Type ManagedType { get; init; }
 
-        public Func<string, object> Deserialize { get; init; }
+        public object? Deserialize(string encoded) => deserializer(encoded);
     }
 
     public class GVariantParser
     {
         private class None { }
 
-        private static Type FromChar(char c) => c switch
-        {
-            // https://docs.gtk.org/glib/gvariant-format-strings.html
-            'b' => typeof(Boolean),
-            'y' => typeof(Char),
-            'n' => typeof(Int16),
-            'q' => typeof(UInt16),
-            'i' => typeof(Int32),
-            'u' => typeof(UInt32),
-            'x' => typeof(Int64),
-            't' => typeof(UInt64),
-            'h' => typeof(Int32),  // handle..?
-            'd' => typeof(Double),
-            'v' => typeof(Object),  // pointer to variant..?
-            's' or 'o' or 'g' => typeof(String),
-            _ => typeof(None)
-        };
-
-        private static object DeserialisePrimitive(char typeChar, string value)
-        {
-
-        }
-
-        internal class ParsingFailed : Exception {}
+        private class CloseBracket {}
 
         private static (Type, IEnumerator<char>) Consume(IEnumerator<char> charEnum, char? marker = null)
         {
@@ -120,65 +123,65 @@ namespace Dconf
             }
 
             char c = charEnum.Current;
-            Type t = FromChar(c);
-            if (t != typeof(None))
+            Func<IEnumerator<char>, (Type, IEnumerator<char>)> consume = c switch
             {
-                return (t, charEnum);
-            }
-
-            if (c == 'a')
-            {
-                (t, charEnum) = Consume(charEnum);
-                t = t.MakeArrayType();
-                return (t, charEnum);
-            }
-
-            if (c == 'm')
-            {
-                (t, charEnum) = Consume(charEnum);
-                Type[] types = [t];
-                t = typeof(Maybe<>).MakeGenericType(types);
-                return (t, charEnum);
-            }
-
-            if (c is '(' || c is '{')
-            {
-                char newMarker = c switch { '(' => ')', _ => '}' };
-                List<Type> types = new();
-                while (true)
+                'a' => charEnum =>
                 {
-                    (t, charEnum) = Consume(charEnum, newMarker);
-                    if (t == typeof(None)) {
-                        throw new ParsingFailed()
+                    Type t;
+                    (t, charEnum) = Consume(charEnum);
+                    t = t.MakeArrayType();
+                    return (t, charEnum);
+                },
+
+                'm' => charEnum =>
+                {
+                    Type t;
+                    (t, charEnum) = Consume(charEnum);
+                    Type[] genericArgs = [t];
+                    t = typeof(Maybe<>).MakeGenericType(genericArgs);
+                    return (t, charEnum);
+                },
+
+                '}' or ')' => charEnum => (typeof(CloseBracket), charEnum),
+
+                '(' or '{' => charEnum =>
+                {
+                    char newMarker = c switch { '(' => ')', '{' => '}',
+                        _ => throw new ParsingFailed("Brackets mysteriously switched")};
+
+                    List<Type> genericArgs = new();
+                    while (true)
+                    {
+                        Type genT;
+                        (genT, charEnum) = Consume(charEnum, newMarker);
+                        if (genT == typeof(None)) { throw new ParsingFailed($"Expecting {newMarker}"); }
+                        if (genT == typeof(CloseBracket)) { break; }
+                        genericArgs.Add(genT);
                     }
-                    types.Add(t);
-                }
 
-                t = c switch
-                {
-                    '(' when types.Count == 0 => typeof(Tuple),
-                    '(' => typeof(Tuple)
-                        .GetMethods()
-                        .Where(m => m.Name == "Create" && m.GetParameters().Count() == types.Count())
-                        .First()
-                        .ReturnType
-                        .GetGenericTypeDefinition()
-                        .MakeGenericType(types.ToArray()),
-                    _ => typeof(Dictionary<,>)
-                        .MakeGenericType(types.ToArray()),
-                };
-                return (t, charEnum);
-            }
+                    Type t = c switch
+                    {
+                        '(' when genericArgs.Count == 0 => typeof(Tuple),
+                        '(' => typeof(Tuple)
+                            .GetMethods()
+                            .Where(m => m.Name == "Create" && m.GetParameters().Count() == genericArgs.Count())
+                            .First()
+                            .ReturnType
+                            .GetGenericTypeDefinition()
+                            .MakeGenericType(genericArgs.ToArray()),
+                        _ => typeof(Dictionary<,>)
+                            .MakeGenericType(genericArgs.ToArray()),
+                    };
+                    return (t, charEnum);
+                },
 
-            if (c == marker)
-            {
-                return (typeof(None), charEnum);
-            }
+                _ => charEnum => (GPrimitive.ParseTypeChar(c), charEnum)
+            };
 
-            throw new InvalidOperationException($"Failed to parse '{c}' as a GVariant type.");
+            return consume(charEnum);
         }
 
-        public static Type Parse(string typeString)
+        public static Type ParseTypeString(string typeString)
         {
             if (string.IsNullOrEmpty(typeString))
             {
@@ -186,8 +189,8 @@ namespace Dconf
             }
 
             var (type, charEnum) = Consume(typeString.GetEnumerator());
-            Debug.Assert(type != typeof(None), "We should not have sentinel values here");
-            Debug.Assert(!charEnum.MoveNext(), "We should have consumed all chars");
+            if (type == typeof(None)) { throw new ParsingFailed("We should not have sentinel values here"); }
+            if (charEnum.MoveNext()) { throw new ParsingFailed("We should have consumed all chars"); }
             return type;
         }
     }

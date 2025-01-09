@@ -96,7 +96,7 @@ namespace Dconf
             string name,
             string path,
             string schemaFile,
-            Type? type = null,
+            GVariant? type = null,
             string? _default = null,
             string? summary = null,
             string? description = null
@@ -113,7 +113,7 @@ namespace Dconf
 
         public string Schema { get; init; }
 
-        public Type? Type { get; init; }
+        public GVariant? Type { get; init; }
 
         public string? Summary { get; init; }
 

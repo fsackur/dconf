@@ -9,8 +9,8 @@ using System.Text.RegularExpressions;
 
 namespace Dconf
 {
-    internal class ParsingFailed : Exception {
-        internal ParsingFailed(string msg) : base(msg) {}
+    internal class ParseException : Exception {
+        internal ParseException(string msg) : base(msg) {}
     }
 
     public struct Maybe<T>
@@ -36,7 +36,9 @@ namespace Dconf
 
     public interface GVariant
     {
-        public abstract object? Deserialize(string encoded);
+        public Type ManagedType { get; }
+
+        public object? Deserialize(string encoded);
     }
 
     public class GPrimitive : GVariant
@@ -79,11 +81,11 @@ namespace Dconf
             );
         }
 
-        public static Type ParseTypeChar(char gChar)
+        public static GVariant Parse(char gChar)
         {
             return _primitives.TryGetValue(gChar, out GPrimitive? prim)
-                ? prim.ManagedType
-                : throw new ParsingFailed($"Not a primitive: {gChar}");
+                ? prim
+                : throw new ParseException($"Not a primitive: {gChar}");
         }
 
         public static object? ToManagedType(char gChar, string encodedValue)
@@ -109,93 +111,184 @@ namespace Dconf
         public object? Deserialize(string encoded) => deserializer(encoded);
     }
 
+    public class GMaybe : GVariant
+    {
+        public GMaybe(GVariant genericArg)
+        {
+            ManagedType = typeof(Maybe<>).MakeGenericType([ genericArg.ManagedType ]);
+        }
+
+        public Type ManagedType { get; init; }
+
+        public object? Deserialize(string encoded) => throw new NotImplementedException();
+    }
+
+    public class GArray : GVariant
+    {
+        public GArray(GVariant genericArg)
+        {
+            ManagedType = genericArg.ManagedType.MakeArrayType();
+        }
+
+        public Type ManagedType { get; init; }
+
+        public object? Deserialize(string encoded) => throw new NotImplementedException();
+    }
+
+    public class GEmptyTuple : GVariant
+    {
+        public Type ManagedType { get => typeof(Tuple); }
+
+        public object? Deserialize(string encoded) => throw new NotImplementedException();
+    }
+
+    public class GTuple : GVariant
+    {
+        public GTuple(IEnumerable<GVariant> genericArgs)
+        {
+            if (genericArgs.Count() < 1)
+            {
+                throw new ParseException($"Expected at least 1 generic arg for {this.GetType()}");
+            }
+
+            var genericTypes = genericArgs
+                .Select(g => g.ManagedType)
+                .ToArray();
+
+            ManagedType = typeof(Tuple)
+                .GetMethods()
+                .Where(m => m.Name == "Create" && m.GetParameters().Count() == genericTypes.Count())
+                .First()
+                .ReturnType
+                .GetGenericTypeDefinition()
+                .MakeGenericType(genericTypes);
+        }
+
+        public Type ManagedType { get; init; }
+
+        public object? Deserialize(string encoded) => throw new NotImplementedException();
+    }
+
+    public class GDict : GVariant
+    {
+        public GDict(IEnumerable<GVariant> genericArgs)
+        {
+            if (genericArgs.Count() != 2)
+            {
+                throw new ParseException($"Expected exactly 2 generic args for {this.GetType()}");
+            }
+
+            var genericTypes = genericArgs
+                .Select(g => g.ManagedType)
+                .ToArray();
+
+            ManagedType = typeof(Dictionary<,>).MakeGenericType(genericTypes);
+        }
+
+        public Type ManagedType { get; init; }
+
+        public object? Deserialize(string encoded) => throw new NotImplementedException();
+    }
+
     public class GVariantParser
     {
-        private class None { }
+        private class GSentinel : GVariant
+        {
+            public Type ManagedType { get => throw new InvalidOperationException($"Cannot work with {nameof(GNone)}"); }
 
-        private class CloseBracket {}
+            public object? Deserialize(string encoded) => throw new InvalidOperationException($"Cannot work with {nameof(GNone)}");
+        }
 
-        private static (Type, IEnumerator<char>) Consume(IEnumerator<char> charEnum, char? marker = null)
+        private class GNone : GSentinel {}
+
+        private class GCloseBracket : GSentinel {}
+
+        private static readonly GVariant None = new GNone();
+
+        private static readonly GCloseBracket CloseRoundBracket = new GCloseBracket();
+
+        private static readonly GCloseBracket CloseCurlyBracket = new GCloseBracket();
+
+        private static (IEnumerable<GVariant>, IEnumerator<char>) ConsumeUntil(IEnumerator<char> charEnum, GCloseBracket marker)
+        {
+            List<GVariant> result = new();
+            while (true)
+            {
+                GVariant v;
+                (v, charEnum) = Consume(charEnum);
+                if (v == None) { throw new ParseException($"Expecting {marker}"); }
+                if (v == marker) { break; }
+                result.Add(v);
+            }
+            return (result, charEnum);
+        }
+
+        private static (GVariant, IEnumerator<char>) Consume(IEnumerator<char> charEnum)
         {
             if (!charEnum.MoveNext())
             {
-                return (typeof(None), charEnum);
+                return (None, charEnum);
             }
 
             char c = charEnum.Current;
-            Func<IEnumerator<char>, (Type, IEnumerator<char>)> consume = c switch
+            Func<IEnumerator<char>, (GVariant, IEnumerator<char>)> consume = c switch
             {
                 'a' => charEnum =>
                 {
-                    Type t;
-                    (t, charEnum) = Consume(charEnum);
-                    t = t.MakeArrayType();
-                    return (t, charEnum);
+                    GVariant v;
+                    (v, charEnum) = Consume(charEnum);
+                    return (new GArray(v), charEnum);
                 },
 
                 'm' => charEnum =>
                 {
-                    Type t;
-                    (t, charEnum) = Consume(charEnum);
-                    Type[] genericArgs = [t];
-                    t = typeof(Maybe<>).MakeGenericType(genericArgs);
-                    return (t, charEnum);
+                    GVariant v;
+                    (v, charEnum) = Consume(charEnum);
+                    return (new GMaybe(v), charEnum);
                 },
 
-                '}' or ')' => charEnum => (typeof(CloseBracket), charEnum),
+                ')' => charEnum => (CloseRoundBracket, charEnum),
 
-                '(' or '{' => charEnum =>
+                '(' => charEnum =>
                 {
-                    char newMarker = c switch { '(' => ')', '{' => '}',
-                        _ => throw new ParsingFailed("Brackets mysteriously switched")};
-
-                    List<Type> genericArgs = new();
-                    while (true)
-                    {
-                        Type genT;
-                        (genT, charEnum) = Consume(charEnum, newMarker);
-                        if (genT == typeof(None)) { throw new ParsingFailed($"Expecting {newMarker}"); }
-                        if (genT == typeof(CloseBracket)) { break; }
-                        genericArgs.Add(genT);
-                    }
-
-                    Type t = c switch
-                    {
-                        '(' when genericArgs.Count == 0 => typeof(Tuple),
-                        '(' => typeof(Tuple)
-                            .GetMethods()
-                            .Where(m => m.Name == "Create" && m.GetParameters().Count() == genericArgs.Count())
-                            .First()
-                            .ReturnType
-                            .GetGenericTypeDefinition()
-                            .MakeGenericType(genericArgs.ToArray()),
-                        _ => typeof(Dictionary<,>)
-                            .MakeGenericType(genericArgs.ToArray()),
-                    };
-                    return (t, charEnum);
+                    IEnumerable<GVariant> genericArgs;
+                    (genericArgs, charEnum) = ConsumeUntil(charEnum, CloseRoundBracket);
+                    GVariant tuple = genericArgs.Count() == 0
+                        ? new GEmptyTuple()
+                        : new GTuple(genericArgs);
+                    return (tuple, charEnum);
                 },
 
-                _ => charEnum => (GPrimitive.ParseTypeChar(c), charEnum)
+                '}' => charEnum => (CloseCurlyBracket, charEnum),
+
+                '{' => charEnum =>
+                {
+                    IEnumerable<GVariant> genericArgs;
+                    (genericArgs, charEnum) = ConsumeUntil(charEnum, CloseCurlyBracket);
+                    return (new GDict(genericArgs), charEnum);
+                },
+
+                _ => charEnum => (GPrimitive.Parse(c), charEnum)
             };
 
             return consume(charEnum);
         }
 
-        public static Type ParseTypeString(string typeString)
+        public static GVariant Parse(string typeString)
         {
             if (string.IsNullOrEmpty(typeString))
             {
-                return typeof(void);
+                return None;
             }
 
-            var (type, charEnum) = Consume(typeString.GetEnumerator());
-            if (type == typeof(None)) { throw new ParsingFailed("We should not have sentinel values here"); }
-            if (charEnum.MoveNext()) { throw new ParsingFailed("We should have consumed all chars"); }
-            return type;
+            var (v, charEnum) = Consume(typeString.GetEnumerator());
+            if (v is GSentinel) { throw new ParseException("We should not have sentinel values here"); }
+            if (charEnum.MoveNext()) { throw new ParseException("We should have consumed all chars"); }
+            return v;
         }
     }
 
-    public class GEnumBuilder
+    public class GEnum : GVariant
     {
         private static ModuleBuilder? module;
 
@@ -251,29 +344,29 @@ namespace Dconf
             }
         }
 
-        public static Type BuildEnum(string name, IEnumerable<KeyValuePair<string, int>> members, bool isFlags = false)
+        public static GEnum Build(string name, IEnumerable<KeyValuePair<string, int>> members, bool isFlags = false)
         {
-            if (GetExistingEnum(name, members, isFlags) is Type type)
+            if (GetExistingEnum(name, members, isFlags) is not Type type)
             {
-                return type;
+                EnumBuilder eb = Module.DefineEnum(name, TypeAttributes.Public, typeof(int));
+                foreach (var kvp in members)
+                {
+                    eb.DefineLiteral(kvp.Key, kvp.Value);
+                }
+
+                if (isFlags)
+                {
+                    var flagCtor = typeof(FlagsAttribute).GetConstructor(new Type[0]);
+                    eb.SetCustomAttribute(flagCtor!, new byte[0]);
+                }
+
+                type = eb.CreateType();
             }
 
-            EnumBuilder eb = Module.DefineEnum(name, TypeAttributes.Public, typeof(int));
-            foreach (var kvp in members)
-            {
-                eb.DefineLiteral(kvp.Key, kvp.Value);
-            }
-
-            if (isFlags)
-            {
-                var flagCtor = typeof(FlagsAttribute).GetConstructor(new Type[0]);
-                eb.SetCustomAttribute(flagCtor!, new byte[0]);
-            }
-
-            return eb.CreateType();
+            return new GEnum(type);
         }
 
-        public static Type BuildEnum(string name, IEnumerable<string> members, bool isFlags = false)
+        public static GEnum Build(string name, IEnumerable<string> members)
         {
             Dictionary<string, int> memberDict = new(members.Count());
             var i = 0;
@@ -282,7 +375,16 @@ namespace Dconf
                 memberDict.Add(member, i);
                 i++;
             }
-            return BuildEnum(name, memberDict, isFlags);
+            return Build(name, memberDict, false);
         }
+
+        protected GEnum(Type managedType)
+        {
+            ManagedType = managedType;
+        }
+
+        public Type ManagedType { get; init; }
+
+        public object? Deserialize(string encoded) => null;
     }
 }

@@ -5,7 +5,7 @@ param
         "~/.local/share/gnome-shell/extensions/*/schemas/"
     ),
 
-    [char[]]$Types
+    [string[]]$Types
 )
 
 $Files = gci $Paths -Filter *.gschema.xml
@@ -24,7 +24,10 @@ foreach ($File in $Files)
         {
             $name = $key.GetAttribute("name")
             $typeName = $key.GetAttribute("type")
-            if ($typeName.Length -eq 1 -and $typeName -in $Types) { $File }
+            $enumName = $key.GetAttribute("enum")
+            $flagName = $key.GetAttribute("flags")
+            if ($typeName -in $Types) { "$name $File" }
+            # if ($enumName) { "$enumName   $File" }
         }
     }
 }

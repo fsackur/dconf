@@ -69,3 +69,42 @@ Describe "Dconf.GVariantParser" {
         }
     }
 }
+
+Describe "Dconf.GEnumBuilder" {
+    It "Builds an enum" {
+        [string[]]$Members = "Foo", "Bar"
+        $Result = [Dconf.GEnumBuilder]::BuildEnum(
+            "FooEnum",
+            $Members,
+            $false
+        )
+
+        $Result.Name | Should -Be "FooEnum"
+        $Result.IsAssignableTo([Enum]) | Should -BeTrue
+        [string[]][Enum]::GetValues($Result) | Should -BeExactly $Members
+        [int][FooEnum]::Foo | Should -Be 0
+        [int][FooEnum]::Bar | Should -Be 1
+        [FooEnum]"Foo, Bar" | Should -Not -Match "Foo, Bar"
+        $Result.GetCustomAttributes($true) | Should -BeNullOrEmpty
+    }
+
+    It "Builds a flag enum" {
+        [Dictionary[string, int]]$Members = [Dictionary[string, int]]::new()
+        $Members.Add("Foo", 1)
+        $Members.Add("Bar", 8)
+
+        $Result = [Dconf.GEnumBuilder]::BuildEnum(
+            "BarEnum",
+            $Members,
+            $true
+        )
+
+        $Result.Name | Should -Be "BarEnum"
+        $Result.IsAssignableTo([Enum]) | Should -BeTrue
+        [string[]][Enum]::GetValues($Result) | Sort-Object | Should -BeExactly ($Members.Keys | Sort-Object)
+        [int][BarEnum]::Foo | Should -Be 1
+        [int][BarEnum]::Bar | Should -Be 8
+        [int][BarEnum]"Foo, Bar" | Should -Be 9
+        $Result.GetCustomAttributes($true) | Should -Match "Flags"
+    }
+}

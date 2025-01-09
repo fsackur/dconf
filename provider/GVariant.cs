@@ -129,12 +129,20 @@ namespace Dconf
     {
         public GMaybe(GVariant genericArg)
         {
+            GenericArg = genericArg;
             ManagedType = typeof(Maybe<>).MakeGenericType([ genericArg.ManagedType ]);
         }
 
+        private GVariant GenericArg { get; init;}
+
         public Type ManagedType { get; init; }
 
-        public object? Deserialize(string encoded) => throw new NotImplementedException();
+        public object? Deserialize(string encoded)
+        {
+            return encoded == "@ms nothing"
+                ? ManagedType.None
+                : ManagedType.Some(GenericArg.Deserialize(encoded));
+        }
     }
 
     public class GArray : GVariant

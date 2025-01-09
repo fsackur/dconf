@@ -9,6 +9,21 @@ using System.Text.RegularExpressions;
 
 namespace Dconf
 {
+    internal static class GVariantUtils
+    {
+        private static Regex unquotePattern = new("""^(['\"])?(?<unquoted>.*)\1$""");
+        private static Regex arrayPattern = new("""^(\[)(?<contents>.*)\1$""");
+        internal static string Unquote(string s) => unquotePattern.Replace(s, "${unquoted}");
+        internal static string[] SplitEncodedArray(string s)
+        {
+            Regex commaPattern = new(@",\s*");
+            var contents = arrayPattern.Replace(s, "${contents}");
+            return string.IsNullOrEmpty(contents)
+                ? new string[] { }
+                : commaPattern.Split(contents);
+        }
+    }
+
     internal class ParseException : Exception {
         internal ParseException(string msg) : base(msg) {}
     }
@@ -47,8 +62,7 @@ namespace Dconf
 
         static GPrimitive()
         {
-            Regex unquotePattern = new("""^(['\"])?(?<unquoted>.*)\1$""");
-            Func<string, string> unquote = s => unquotePattern.Replace(s, "${unquoted}");
+            var unquote = GVariantUtils.Unquote;
 
             List<Tuple<
                         char,
@@ -307,6 +321,10 @@ namespace Dconf
             }
         }
 
+        public static bool IsFlags(GVariant v) => IsFlags(v.ManagedType);
+
+        public static bool IsFlags(Type t) => t.GetCustomAttributes(false).Any(a => a is FlagsAttribute);
+
         private static Type? GetExistingEnum(string name, IEnumerable<KeyValuePair<string, int>> members, bool isFlags = false)
         {
             if (Module.GetType(name) is not Type type)
@@ -385,6 +403,18 @@ namespace Dconf
 
         public Type ManagedType { get; init; }
 
-        public object? Deserialize(string encoded) => null;
+        public object? Deserialize(string encoded)
+        {
+            string[] encodedArray = IsFlags(this)
+                ? GVariantUtils.SplitEncodedArray(Regex.Replace(encoded, @"^@as\s+", ""))
+                : [ encoded ];
+
+            var unquote = GVariantUtils.Unquote;
+            string names = string.Join(',', encodedArray.Select(unquote));
+
+            return Enum.TryParse(ManagedType, names, out object? result)
+                ? result
+                : throw new ParseException($"{names} is not a valid case for {ManagedType}");
+        }
     }
 }

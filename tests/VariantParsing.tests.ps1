@@ -70,40 +70,43 @@ Describe "Dconf.GVariantParser" {
     }
 }
 
-# Describe "Dconf.GEnumBuilder" {
-#     It "Builds an enum" {
-#         [string[]]$Members = "Foo", "Bar"
-#         $Result = [Dconf.GEnum]::Build(
-#             "FooEnum",
-#             $Members
-#         ).ManagedType
+Describe "Dconf.GEnumBuilder" {
+    It "Builds an enum" {
+        [string[]]$Members = "Foo", "Bar"
 
-#         $Result.Name | Should -Be "FooEnum"
-#         $Result.IsAssignableTo([Enum]) | Should -BeTrue
-#         [string[]][Enum]::GetValues($Result) | Should -BeExactly $Members
-#         [int]$Result::Foo | Should -Be 0
-#         [int]$Result::Bar | Should -Be 1
-#         "Foo, Bar" -as $Result | Should -Not -Match "Foo, Bar"
-#         $Result.GetCustomAttributes($true) | Should -BeNullOrEmpty
-#     }
+        $Result = [GVariant.GEnum]::Build(
+            "FooEnum",
+            $Members
+        )
+        $ManagedType = $Result.GetType().GetMethod("Deserialize").ReturnType
 
-#     It "Builds a flag enum" {
-#         [Dictionary[string, int]]$Members = [Dictionary[string, int]]::new()
-#         $Members.Add("Foo", 1)
-#         $Members.Add("Bar", 8)
+        $ManagedType.Name | Should -Be "FooEnum"
+        $ManagedType.IsAssignableTo([Enum]) | Should -BeTrue
+        [string[]][Enum]::GetValues($ManagedType) | Should -BeExactly $Members
+        [int]$ManagedType::Foo | Should -Be 0
+        [int]$ManagedType::Bar | Should -Be 1
+        "Foo, Bar" -as $ManagedType | Should -Not -Match "Foo, Bar"
+        $ManagedType.GetCustomAttributes($true) | Should -BeNullOrEmpty
+    }
 
-#         $Result = [Dconf.GEnum]::Build(
-#             "BarEnum",
-#             $Members,
-#             $true
-#         ).ManagedType
+    It "Builds a flag enum" {
+        [Dictionary[string, int]]$Members = [Dictionary[string, int]]::new()
+        $Members.Add("Foo", 1)
+        $Members.Add("Bar", 8)
 
-#         $Result.Name | Should -Be "BarEnum"
-#         $Result.IsAssignableTo([Enum]) | Should -BeTrue
-#         [string[]][Enum]::GetValues($Result) | Sort-Object | Should -BeExactly ($Members.Keys | Sort-Object)
-#         [int]$Result::Foo | Should -Be 1
-#         [int]$Result::Bar | Should -Be 8
-#         "Foo, Bar" -as $Result -as [int] | Should -Be 9
-#         $Result.GetCustomAttributes($true) | Should -Match "Flags"
-#     }
-# }
+        $Result = [GVariant.GEnum]::Build(
+            "BarEnum",
+            $Members,
+            $true
+        )
+        $ManagedType = $Result.GetType().GetMethod("Deserialize").ReturnType
+
+        $ManagedType.Name | Should -Be "BarEnum"
+        $ManagedType.IsAssignableTo([Enum]) | Should -BeTrue
+        [string[]][Enum]::GetValues($ManagedType) | Sort-Object | Should -BeExactly ($Members.Keys | Sort-Object)
+        [int]$ManagedType::Foo | Should -Be 1
+        [int]$ManagedType::Bar | Should -Be 8
+        "Foo, Bar" -as $ManagedType -as [int] | Should -Be 9
+        $ManagedType.GetCustomAttributes($true) | Should -Match "Flags"
+    }
+}

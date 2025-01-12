@@ -13,11 +13,20 @@ namespace Dconf
     {
         public GArray(GVariant genericArg)
         {
+            GenericArg = genericArg;
             ManagedType = genericArg.ManagedType.MakeArrayType();
         }
 
         public Type ManagedType { get; init; }
 
-        public object? Deserialize(string encoded) => throw new NotImplementedException();
+        public GVariant GenericArg { get; init; }
+
+        public object? Deserialize(string encoded)
+        {
+            return GVariantUtils
+                .SplitEncodedArray(encoded)
+                .Select(e => GenericArg.Deserialize(e))
+                .ToArray();
+        }
     }
 }

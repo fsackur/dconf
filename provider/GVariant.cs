@@ -12,10 +12,11 @@ namespace Dconf
     internal static class GVariantUtils
     {
         private static readonly Regex unquotePattern = new("""^(['\"])?(?<unquoted>.*)\1$""");
-        private static readonly Regex arrayPattern = new("""^(\[)(?<contents>.*)\1$""");
+        private static readonly Regex arrayPattern = new("""^\[(?<contents>.*)\]$""");
         internal static string Unquote(string s) => unquotePattern.Replace(s, "${unquoted}");
         internal static string[] SplitEncodedArray(string s)
         {
+            // TODO: needs a full parser, or we'll get caught out by strings containing commas
             Regex commaPattern = new(@",\s*");
             var contents = arrayPattern.Replace(s, "${contents}");
             return string.IsNullOrEmpty(contents)

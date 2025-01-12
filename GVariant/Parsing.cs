@@ -12,20 +12,20 @@ namespace GVariant
     public class Parser
     {
         #region Sentinels
-        private class GSentinel : GVariant {}
+        private class GSentinel : GVariant<object> {}
         private class GNone : GSentinel {}
         private class GCloseBracket : GSentinel {}
-        private static readonly GVariant None = new GNone();
+        private static readonly GVariant<object> None = new GNone();
         private static readonly GCloseBracket CloseRoundBracket = new GCloseBracket();
         private static readonly GCloseBracket CloseCurlyBracket = new GCloseBracket();
         #endregion Sentinels
 
-        private static (IEnumerable<GVariant>, IEnumerator<char>) ConsumeUntil(IEnumerator<char> charEnum, GCloseBracket marker)
+        private static (IEnumerable<GVariant<object>>, IEnumerator<char>) ConsumeUntil(IEnumerator<char> charEnum, GCloseBracket marker)
         {
-            List<GVariant> result = new();
+            List<GVariant<object>> result = new();
             while (true)
             {
-                GVariant v;
+                GVariant<object> v;
                 (v, charEnum) = Consume(charEnum);
                 if (v == None) { throw new ParseException($"Expecting {marker}"); }
                 if (v == marker) { break; }
@@ -34,7 +34,7 @@ namespace GVariant
             return (result, charEnum);
         }
 
-        private static (GVariant, IEnumerator<char>) Consume(IEnumerator<char> charEnum)
+        private static (GVariant<object>, IEnumerator<char>) Consume(IEnumerator<char> charEnum)
         {
             if (!charEnum.MoveNext())
             {
@@ -42,8 +42,20 @@ namespace GVariant
             }
 
             char c = charEnum.Current;
-            Func<IEnumerator<char>, (GVariant, IEnumerator<char>)> consume = c switch
+            Func<IEnumerator<char>, (GVariant<object>, IEnumerator<char>)> consume;
+
+            consume = c switch
             {
+                'a' => charEnum =>
+                {
+                    GVariant<object> v;
+                    (v, charEnum) = Consume(charEnum);
+
+                    Type gType = typeof(GArray<>).MakeGenericType(new Type[] { v.GetType() });
+                    var ctor = gType.GetConstructor(new Type[0])!;
+                    return ((GVariant<object>)ctor.Invoke(new object[0]), charEnum);
+                },
+
                 _ => charEnum => (GPrimitive.Parse(c), charEnum)
             };
 

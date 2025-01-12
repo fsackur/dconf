@@ -103,7 +103,7 @@ namespace GVariant
         }
     }
 
-    public class GEnum<T> : GEnum where T : Enum
+    public class GEnum<T> : GEnum, GVariant<T> where T : Enum
     {
         public GEnum() {}
 
@@ -116,7 +116,7 @@ namespace GVariant
         }
     }
 
-    public class GFlagsEnum<T> : GEnum<T> where T : Enum
+    public class GFlagsEnum<T> : GEnum<T>, GVariant<T> where T : Enum
     {
         public GFlagsEnum() : base() {}
 

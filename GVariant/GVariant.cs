@@ -30,4 +30,6 @@ namespace GVariant
     }
 
     public abstract class GVariant {}
+
+    public interface GVariant<out T> {}
 }

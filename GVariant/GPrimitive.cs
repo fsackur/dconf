@@ -32,9 +32,9 @@ namespace GVariant
 
         private readonly static Dictionary<char, GPrimitive> primitiveMap = new();
 
-        public static GPrimitive Parse(char gChar)
+        public static GVariant<object> Parse(char gChar)
         {
-            GPrimitive prim;
+            GVariant<object> prim;
             if (primitiveMap.TryGetValue(gChar, out prim!))
             {
                 return prim;
@@ -47,14 +47,14 @@ namespace GVariant
 
             Type gType = typeof(GPrimitive<>).GetGenericTypeDefinition().MakeGenericType(new Type[] { type });
             var ctor = gType.GetConstructor(new Type[0])!;
-            prim = (GPrimitive)ctor.Invoke(new object[0]);
+            prim = (GPrimitive<object>)ctor.Invoke(new object[0]);
 
             primitiveMap.Add(gChar, prim);
             return prim;
         }
     }
 
-    public class GPrimitive<T> : GPrimitive where T : IParsable<T>
+    public class GPrimitive<T> : GPrimitive, GVariant<T> where T : IParsable<T>
     {
         public T Deserialize(string encoded)
         {

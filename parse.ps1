@@ -8,7 +8,7 @@ param
     [string[]]$Types
 )
 
-$Files = gci $Paths -Filter *.gschema.xml
+$Files = gci $Paths -Filter *.gschema.xml #-Exclude ca.desrt.dconf-editor.gschema.xml
 foreach ($File in $Files)
 {
     $x = [System.Xml.XmlDocument]::new()
@@ -26,7 +26,19 @@ foreach ($File in $Files)
             $typeName = $key.GetAttribute("type")
             $enumName = $key.GetAttribute("enum")
             $flagName = $key.GetAttribute("flags")
-            if ($typeName -in $Types) { "$name $File" }
+            $typeString = $typeName, $enumName, $flagName | where {$_} | select -first 1
+
+            if ($typeName -in $Types)
+            {
+                [pscustomobject]@{
+                    PSTypeName = "KeyFacts"
+                    xmlFile = $File.FullName
+                    schema = $id
+                    key = $name
+                    typeString = $typeString
+                    value = gsettings get $id $name
+                }
+            }
             # if ($enumName) { "$enumName   $File" }
         }
     }

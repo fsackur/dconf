@@ -16,12 +16,14 @@ namespace Dconf
         private static readonly Regex unquotePattern = new("""^(['\"])?(?<unquoted>.*)\1$""");
         private static readonly Regex arrayPattern = new("""^\[(?<contents>.*)\]$""");
         private static readonly Regex dictPattern = new("""^\{(?<contents>.*)\}$""");
+        private static readonly Regex tuplePattern = new("""^\((?<contents>.*)\)$""");
         private static readonly Regex commaPattern = new(@",\s*");
         private static readonly Regex colonPattern = new(@":\s*");
         internal static string Unquote(string s) => unquotePattern.Replace(s, "${unquoted}");
 
         internal static string StripArray(string s) => arrayPattern.Replace(s, "${contents}");
         internal static string StripDict(string s) => dictPattern.Replace(s, "${contents}");
+        internal static string StripTuple(string s) => tuplePattern.Replace(s, "${contents}");
         internal static string[] SplitOnComma(string s)
         {
             return string.IsNullOrWhiteSpace(s)
@@ -112,10 +114,11 @@ namespace Dconf
                 {
                     IEnumerable<GVariant> genericArgs;
                     (genericArgs, charEnum) = ConsumeUntil(charEnum, CloseRoundBracket);
-                    GVariant tuple = genericArgs.Count() == 0
-                        ? new GEmptyTuple()
-                        : new GTuple(genericArgs);
-                    return (tuple, charEnum);
+                    if (genericArgs.Count() < 1)
+                    {
+                        throw new ParseException($"Expected at least 1 generic arg for {typeof(GTuple)}");
+                    }
+                    return (new GTuple(genericArgs), charEnum);
                 },
 
                 '}' => charEnum => (CloseCurlyBracket, charEnum),

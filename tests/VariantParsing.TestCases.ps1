@@ -167,43 +167,43 @@ using namespace System.Collections.Generic;
         TypeString = "(sb)"
         ManagedType = [Tuple[string,bool]]
         InputString = "('Artist', true)"
-        Expected = ('Artist', $true)
+        Expected = [Tuple[string,bool]]::new('Artist', $true)
     },
     @{  # /usr/share/glib-2.0/schemas/org.gnome.Settings.gschema.xml:org.gnome.Settings/window-state
         TypeString = "(iib)"
         ManagedType = [Tuple[int,int,bool]]
         InputString = "(1358, 1368, false)"
-        Expected = (1358, 1368, $false)
+        Expected = [Tuple[int,int,bool]]::new(1358, 1368, $false)
     },
     @{  # /usr/share/glib-2.0/schemas/org.gnome.baobab.gschema.xml:org.gnome.baobab.ui/window-size
         TypeString = "(ii)"
         ManagedType = [Tuple[int,int]]
         InputString = "(960, 600)"
-        Expected = (960, 600)
+        Expected = [Tuple[int,int]]::new(960, 600)
     },
     @{  # /usr/share/glib-2.0/schemas/org.gnome.Evince.gschema.xml:org.gnome.Evince.Default/window-ratio
         TypeString = "(dd)"
         ManagedType = [Tuple[double,double]]
         InputString = "(2.3523489932885906, 1.6247030878859858)"
-        Expected = (2.3523489932885906, 1.6247030878859858)
+        Expected = [Tuple[double,double]]::new(2.3523489932885906, 1.6247030878859858)
     },
     @{  # /usr/share/glib-2.0/schemas/org.gtk.gtk4.Settings.ColorChooser.gschema.xml:org.gtk.gtk4.Settings.ColorChooser/selected-color
         TypeString = "(bdddd)"
         ManagedType = [Tuple[bool,double,double,double,double]]
         InputString = "(true, 0.20784313976764679, 0.51764708757400513, 0.89411765336990356, 1.0)"
-        Expected = ($true, 0.20784313976764679, 0.51764708757400513, 0.89411765336990356, 1.0)
+        Expected = [Tuple[bool,double,double,double,double]]::new($true, 0.20784313976764679, 0.51764708757400513, 0.89411765336990356, 1.0)
     },
     @{  # /usr/share/glib-2.0/schemas/org.gnome.calendar.gschema.xml:org.gnome.calendar/weather-settings
         TypeString = "(bbsmv)"
-        ManagedType = [Tuple[bool,bool,string,Dconf.Maybe[System.Object]]]
+        ManagedType = [Tuple[bool,bool,string,Dconf.Maybe[object]]]
         InputString = "(true, true, '', @mv nothing)"
-        Expected = ($true, $true, '', [Dconf.Maybe[string]].None)
+        Expected = [Tuple[bool,bool,string,Dconf.Maybe[object]]]::new($true, $true, '', [Dconf.Maybe[object]].None)
     },
     @{  # /usr/share/glib-2.0/schemas/org.gnome.GWeather4.gschema.xml:org.gnome.GWeather4/default-location
         TypeString = "(ssm(dd))"
         ManagedType = [Tuple[string,string,Dconf.Maybe[Tuple[double,double]]]]
         InputString = "('', 'EGLL', @m(dd) nothing)"
-        Expected = ('', 'EGLL', [Dconf.Maybe[Tuple[double,double]]].None)
+        Expected = [Tuple[string,string,Dconf.Maybe[Tuple[double,double]]]]::new('', 'EGLL', [Dconf.Maybe[Tuple[double,double]]].None)
     },
     @{  # /usr/share/glib-2.0/schemas/org.freedesktop.ibus.engine.anthy.gschema.xml:org.freedesktop.ibus.engine.anthy.dict/files
         TypeString = "a{sv}"
@@ -227,25 +227,26 @@ using namespace System.Collections.Generic;
         TypeString = "a(us)"
         ManagedType = [Tuple[uint,string][]]
         InputString = "[(uint32 0, '#e01b24'), (1, '#ff7800'), (2, '#f6d32d'), (3, '#33d17a'), (4, '#26a269'), (5, '#62a0ea'), (6, '#1c71d8'), (7, '#613583'), (8, '#9141ac'), (9, '#c061cb'), (10, '#ffbe6f'), (11, '#f9f06b'), (12, '#8ff0a4'), (13, '#2ec27e'), (14, '#1a5fb4'), (15, '#c061cb'), (16, '#b01c7999f332'), (17, '#7999f3328ca0'), (18, '#f33279998a0c'), (19, '#7999ad88f332'), (20, '#d103f3327999'), (21, '#f1e57999f332'), (22, '#7999f332ce6a'), (23, '#f332aaee7999')]"
-        Expected = @((0, '#e01b24'), (1, '#ff7800'), (2, '#f6d32d'), (3, '#33d17a'), (4, '#26a269'), (5, '#62a0ea'), (6, '#1c71d8'), (7, '#613583'), (8, '#9141ac'), (9, '#c061cb'), (10, '#ffbe6f'), (11, '#f9f06b'), (12, '#8ff0a4'), (13, '#2ec27e'), (14, '#1a5fb4'), (15, '#c061cb'), (16, '#b01c7999f332'), (17, '#7999f3328ca0'), (18, '#f33279998a0c'), (19, '#7999ad88f332'), (20, '#d103f3327999'), (21, '#f1e57999f332'), (22, '#7999f332ce6a'), (23, '#f332aaee7999'))
+        Expected = @((0, '#e01b24'), (1, '#ff7800'), (2, '#f6d32d'), (3, '#33d17a'), (4, '#26a269'), (5, '#62a0ea'), (6, '#1c71d8'), (7, '#613583'), (8, '#9141ac'), (9, '#c061cb'), (10, '#ffbe6f'), (11, '#f9f06b'), (12, '#8ff0a4'), (13, '#2ec27e'), (14, '#1a5fb4'), (15, '#c061cb'), (16, '#b01c7999f332'), (17, '#7999f3328ca0'), (18, '#f33279998a0c'), (19, '#7999ad88f332'), (20, '#d103f3327999'), (21, '#f1e57999f332'), (22, '#7999f332ce6a'), (23, '#f332aaee7999')) |
+            ForEach-Object {[Tuple[uint,string]]::new($_[0], $_[1])}
     },
     @{  # /usr/share/glib-2.0/schemas/org.gnome.desktop.input-sources.gschema.xml:org.gnome.desktop.input-sources/sources
         TypeString = "a(ss)"
         ManagedType = [Tuple[string,string][]]
         InputString = "[('xkb', 'gb')]"
-        Expected = @(('xkb', 'gb'))
+        Expected = @([Tuple[string,string]]::new('xkb', 'gb'))
     },
     @{  # /usr/share/glib-2.0/schemas/org.gnome.epiphany.gschema.xml:org.gnome.Epiphany/search-engines
         TypeString = "a(sss)"
         ManagedType = [Tuple[string,string,string][]]
         InputString = "@a(sss) [('foo', 'bar', 'baz')]"
-        Expected = @(('foo', 'bar', 'baz'))
+        Expected = @([Tuple[string,string,string]]::new('foo', 'bar', 'baz'))
     },
     @{  # /usr/share/glib-2.0/schemas/org.gtk.gtk4.Settings.ColorChooser.gschema.xml:org.gtk.gtk4.Settings.ColorChooser/custom-colors
         TypeString = "a(dddd)"
         ManagedType = [Tuple[double,double,double,double][]]
         InputString = "[(0.75, 0.25, 0.25, 1.0)]"
-        Expected = @((0.75, 0.25, 0.25, 1.0))
+        Expected = @([Tuple[double,double,double,double]]::new(0.75, 0.25, 0.25, 1.0))
     },
     @{  # /usr/share/glib-2.0/schemas/org.gtk.gtk4.Settings.EmojiChooser.gschema.xml:org.gtk.gtk4.Settings.EmojiChooser/recently-used-emoji
         TypeString = "a((aussasasu)u)"

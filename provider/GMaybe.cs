@@ -9,7 +9,7 @@ using System.Text.RegularExpressions;
 
 namespace Dconf
 {
-    public struct Maybe<T>
+    public class Maybe<T>
     {
         public static Maybe<T> None => default;
         public static Maybe<T> Some(T value) => new Maybe<T>(value);

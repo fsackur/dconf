@@ -9,21 +9,11 @@ using System.Text.RegularExpressions;
 
 namespace Dconf
 {
-    public class GEmptyTuple : GVariant
-    {
-        public Type ManagedType { get => typeof(Tuple); }
-
-        public object? Deserialize(string encoded) => throw new NotImplementedException();
-    }
-
     public class GTuple : GVariant
     {
         public GTuple(IEnumerable<GVariant> genericArgs)
         {
-            if (genericArgs.Count() < 1)
-            {
-                throw new ParseException($"Expected at least 1 generic arg for {this.GetType()}");
-            }
+            GenericArgs = genericArgs;
 
             var genericTypes = genericArgs
                 .Select(g => g.ManagedType)
@@ -40,6 +30,18 @@ namespace Dconf
 
         public Type ManagedType { get; init; }
 
-        public object? Deserialize(string encoded) => throw new NotImplementedException();
+        public IEnumerable<GVariant> GenericArgs { get; init; }
+
+        public object? Deserialize(string encoded)
+        {
+            encoded = GVariantUtils.StripTuple(encoded);
+            var items = GVariantUtils
+                .SplitOnComma(encoded)
+                .Zip(GenericArgs, (item, gv) => gv.Deserialize(item))
+                .ToArray();
+
+            var ctor = ManagedType.GetConstructor(ManagedType.GetGenericArguments());
+            return ctor!.Invoke(items);
+        }
     }
 }

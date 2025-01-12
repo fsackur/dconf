@@ -11,6 +11,16 @@ Describe "Dconf.GVariantParser" {
             $Result.ManagedType | Should -Be $ManagedType
         }
     }
+
+    Context "Deserialization" {
+        It "Deserializes a value string: '<InputString>'" -ForEach (
+            $TestCases | Where-Object {$_.ContainsKey("Expected")}
+        ) {
+            $Parser = [Dconf.GVariantParser]::Parse($TypeString)
+            $Result = $Parser.Deserialize($InputString)
+            $Result | Should -Be $Expected
+        }
+    }
 }
 
 Describe "Dconf.GEnumBuilder" {

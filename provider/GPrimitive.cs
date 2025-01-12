@@ -6,75 +6,81 @@ using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Text.RegularExpressions;
+using System.Globalization;
 
 namespace Dconf
 {
-    public class GPrimitive : GVariant
+    public class GPrimitive
     {
-        private readonly static Dictionary<char, GPrimitive> _primitives;
-
-        static GPrimitive()
+        private readonly static Dictionary<char, Type> typeMap = new()
         {
-            var unquote = GVariantUtils.Unquote;
+            { 'b', typeof(Boolean) },
+            { 'y', typeof(Char) },
+            { 'n', typeof(Int16) },
+            { 'q', typeof(UInt16) },
+            { 'i', typeof(Int32) },
+            { 'u', typeof(UInt32) },
+            { 'x', typeof(Int64) },
+            { 't', typeof(UInt64) },
+            // { 'h', typeof(Int32) },  // TODO: handle..?
+            { 'd', typeof(Double) },
+            // { 'v', typeof(Object) },  // TODO
+            { 's', typeof(String) },
+            { 'o', typeof(String) },
+            { 'g', typeof(String) },
+        };
 
-            List<Tuple<
-                        char,
-                        Type,
-                        Func<string, object>>> primMembers =
-            new() {
-                // https://docs.gtk.org/glib/gvariant-format-strings.html
-                new('b', typeof(Boolean), s => Boolean.Parse(s)),
-                new('y', typeof(Char), s => Char.Parse(s)),
-                new('n', typeof(Int16), s => Int16.Parse(s)),
-                new('q', typeof(UInt16), s => UInt16.Parse(s)),
-                new('i', typeof(Int32), s => Int32.Parse(s)),
-                new('u', typeof(UInt32), s => UInt32.Parse(s)),
-                new('x', typeof(Int64), s => Int64.Parse(s)),
-                new('t', typeof(UInt64), s => UInt64.Parse(s)),
-                new('h', typeof(Int32),  s => Int32.Parse(s)),  // TODO: handle..?
-                new('d', typeof(Double), s => Double.Parse(s)),
-                new('v', typeof(Object), s => unquote(s)),  // TODO: variant..?
-                new('s', typeof(String), s => unquote(s)),
-                new('o', typeof(String), s => unquote(s)),
-                new('g', typeof(String), s => unquote(s))
-            };
-
-            _primitives = new(
-                primMembers.Select(args => new GPrimitive(
-                                gChar: args.Item1,
-                                type: args.Item2,
-                                deserializer: args.Item3))
-                           .Select(prim => new KeyValuePair<char, GPrimitive>(prim.GChar, prim))
-            );
-        }
+        private readonly static Dictionary<char, GVariant> primitiveMap = new();
 
         public static GVariant Parse(char gChar)
         {
-            return _primitives.TryGetValue(gChar, out GPrimitive? prim)
-                ? prim
-                : throw new ParseException($"Not a primitive: {gChar}");
+            GVariant prim;
+            if (primitiveMap.TryGetValue(gChar, out prim!))
+            {
+                return prim;
+            }
+
+            if (!typeMap.TryGetValue(gChar, out Type? type))
+            {
+                throw new ParseException($"Not a primitive: {gChar}");
+            }
+
+            Type gType = typeof(GPrimitive<>).GetGenericTypeDefinition().MakeGenericType(new Type[] { type });
+            var ctor = gType.GetConstructor(new Type[0])!;
+            prim = (GVariant)ctor.Invoke(new object[0]);
+
+            primitiveMap.Add(gChar, prim);
+            return prim;
         }
+    }
 
-        public static object? ToManagedType(char gChar, string encodedValue)
-        {
-            return _primitives.TryGetValue(gChar, out GPrimitive? prim)
-                ? prim.Deserialize(encodedValue)
-                : null;
-        }
+    public class GPrimitive<T> : GPrimitive, GVariant where T : IParsable<T>
+    {
+        private static readonly Regex typeSigPattern = new (@"^(byte|u?int(16|32|64))\s+");
 
-        private Func<string, object?> deserializer;
-
-        public GPrimitive(char gChar, Type type, Func<string, object?> deserializer)
-        {
-            GChar = gChar;
-            ManagedType = type;
-            this.deserializer = deserializer;
-        }
-
-        public char GChar { get; init; }
+        public GPrimitive() => ManagedType = typeof(T);
 
         public Type ManagedType { get; init; }
 
-        public object? Deserialize(string encoded) => deserializer(encoded);
+        public object? Deserialize(string encoded)
+        {
+            if (typeof(T) == typeof(string))
+            {
+                return GVariantUtils.Unquote(encoded);
+            }
+
+            encoded = typeSigPattern.Replace(encoded, "");
+
+            if (encoded.StartsWith("0x"))
+            {
+                var bytes = Convert.FromHexString(encoded.Substring(2));
+                encoded = string.Join(
+                    "",
+                    bytes.Select(b => ((char)b).ToString())
+                );
+            }
+
+            return T.Parse(encoded, CultureInfo.InvariantCulture);
+        }
     }
 }

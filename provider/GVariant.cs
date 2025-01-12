@@ -11,8 +11,8 @@ namespace Dconf
 {
     internal static class GVariantUtils
     {
-        private static Regex unquotePattern = new("""^(['\"])?(?<unquoted>.*)\1$""");
-        private static Regex arrayPattern = new("""^(\[)(?<contents>.*)\1$""");
+        private static readonly Regex unquotePattern = new("""^(['\"])?(?<unquoted>.*)\1$""");
+        private static readonly Regex arrayPattern = new("""^(\[)(?<contents>.*)\1$""");
         internal static string Unquote(string s) => unquotePattern.Replace(s, "${unquoted}");
         internal static string[] SplitEncodedArray(string s)
         {

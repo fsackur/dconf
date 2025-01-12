@@ -5,7 +5,7 @@ param
         "~/.local/share/gnome-shell/extensions/*/schemas/"
     ),
 
-    [string[]]$Types
+    [string[]]$Types = "*"
 )
 
 $Files = gci $Paths -Filter *.gschema.xml #-Exclude ca.desrt.dconf-editor.gschema.xml
@@ -28,7 +28,7 @@ foreach ($File in $Files)
             $flagName = $key.GetAttribute("flags")
             $typeString = $typeName, $enumName, $flagName | where {$_} | select -first 1
 
-            if ($typeName -in $Types)
+            if ($Types | where {$typeString -like $_})
             {
                 [pscustomobject]@{
                     PSTypeName = "KeyFacts"

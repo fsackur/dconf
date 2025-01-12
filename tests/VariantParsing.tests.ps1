@@ -1,76 +1,14 @@
 using namespace System.Collections.Generic;
 
 BeforeDiscovery {
-    $TestData = [ordered]@{
-        "b" = [bool]
-        "y" = [char]
-        "n" = [Int16]
-        "q" = [UInt16]
-        "i" = [Int32]
-        "u" = [UInt32]
-        "x" = [Int64]
-        "t" = [UInt64]
-        "d" = [double]
-        "s" = [string]
-        "o" = [string]  # represents schema path
-        "g" = [string]  # e.g. iias  ???
-        "h" = [Int32]  # handle???
-        "v" = [object]
-
-        "ms" = [Dconf.Maybe[string]]
-        "mb" = [Dconf.Maybe[bool]]
-
-        "ay" = [char[]]
-        "ai" = [Int32[]]
-        "ad" = [double[]]
-        "as" = [string[]]
-        "ao" = [string[]]
-        "av" = [object[]]
-        "aay" = [char[][]]
-        "aas" = [string[][]]
-
-        "{ss}" = [Dictionary[string, string]]
-
-        "()" = [Tuple]  # probably delete, it's only found in schema editor
-
-        "(sb)" = [Tuple[string, bool]]
-        "(iib)" = [Tuple[int, int, bool]]
-        "(ii)" = [Tuple[int, int]]
-        "(dd)" = [Tuple[double, double]]
-        "(bdddd)" = [Tuple[bool, double, double, double, double]]
-        "(bbsmv)" = [Tuple[bool, bool, string, Dconf.Maybe[object]]]
-        "(ssm(dd))" = [Tuple[string, string, Dconf.Maybe[Tuple[double, double]]]]
-
-        "a{sv}" = [Dictionary[string, object][]]
-        "aa{sv}" = [Dictionary[string, object][][]]
-        "a{ss}" = [Dictionary[string, string][]]
-        "a(us)" = [Tuple[uint, string][]]
-        "a(sss)" = [Tuple[string, string, string][]]
-        "a(ss)" = [Tuple[string, string][]]
-        "a(dddd)" = [Tuple[double, double, double, double][]]
-        "a((aussasasu)u)" = [Tuple[
-            Tuple[uint[], string, string, string[], string[], uint],
-            uint
-        ][]]
-        "a((auss)u)" = [Tuple[
-            Tuple[uint[], string, string],
-            uint
-        ][]]
-    }
-
-    $TestCases = $TestData.GetEnumerator() | ForEach-Object {
-        @{
-            TypeString = $_.Key
-            Expected = $_.Value
-        }
-    }
+    $TestCases = & ($PSCommandPath -replace 'tests.ps1', 'TestCases.ps1')
 }
 
 Describe "Dconf.GVariantParser" {
     Context "Parsing" {
         It "Parses a type string: '<TypeString>'" -ForEach $TestCases {
             $Result = [Dconf.GVariantParser]::Parse($TypeString)
-            $Result.ManagedType | Should -Be $Expected
+            $Result.ManagedType | Should -Be $ManagedType
         }
     }
 }

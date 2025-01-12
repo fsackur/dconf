@@ -32,6 +32,8 @@ namespace Dconf
 
     public class GMaybe : GVariant
     {
+        private static readonly Regex typeSigPattern = new(@"^@\S+\s+");
+
         public GMaybe(GVariant genericArg)
         {
             GenericArg = genericArg;
@@ -44,7 +46,8 @@ namespace Dconf
 
         public object? Deserialize(string encoded)
         {
-            return encoded == "@ms nothing"
+            encoded = typeSigPattern.Replace(encoded, "");
+            return encoded == "nothing"
                 ? ManagedType.GetProperty("None")!.GetValue(ManagedType)
                 : ManagedType.GetMethod("Some")!.Invoke(ManagedType, new object[] { GenericArg.Deserialize(encoded)! });
         }

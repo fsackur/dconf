@@ -11,22 +11,33 @@ namespace Dconf
 {
     public class GDict : GVariant
     {
-        public GDict(IEnumerable<GVariant> genericArgs)
+        public GDict(GVariant genericKeyArg, GVariant genericValueArg)
         {
-            if (genericArgs.Count() != 2)
-            {
-                throw new ParseException($"Expected exactly 2 generic args for {this.GetType()}");
-            }
-
-            var genericTypes = genericArgs
-                .Select(g => g.ManagedType)
-                .ToArray();
-
+            GenericKeyArg = genericKeyArg;
+            GenericValueArg = genericValueArg;
+            Type[] genericTypes = [ genericKeyArg.ManagedType, genericValueArg.ManagedType ];
             ManagedType = typeof(Dictionary<,>).MakeGenericType(genericTypes);
         }
 
         public Type ManagedType { get; init; }
 
-        public object? Deserialize(string encoded) => throw new NotImplementedException();
+        public GVariant GenericKeyArg { get; init; }
+
+        public GVariant GenericValueArg { get; init; }
+
+        public object? Deserialize(string encoded)
+        {
+            encoded = GVariantUtils.StripDict(encoded);
+            var kvps = GVariantUtils.SplitOnComma(encoded).Select(GVariantUtils.SplitKeyValuePair);
+            var ctor = ManagedType.GetConstructor(new Type[] { typeof(int) });
+            var result = (IDictionary)ctor!.Invoke(new object[] { kvps.Count() });
+            foreach (var (key, value) in kvps)
+            {
+                object parsedKey = GenericKeyArg.Deserialize(key)!;
+                object parsedValue = GenericValueArg.Deserialize(value)!;
+                result.Add(parsedKey, parsedValue);
+            }
+            return result;
+        }
     }
 }

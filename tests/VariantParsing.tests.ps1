@@ -18,7 +18,18 @@ Describe "Dconf.GVariantParser" {
         ) {
             $Parser = [Dconf.GVariantParser]::Parse($TypeString)
             $Result = $Parser.Deserialize($InputString)
-            $Result | Should -Be $Expected
+
+            if ($ManagedType.IsAssignableTo([Collections.IDictionary]))
+            {
+                $Result.Keys | Sort-Object | Should -Be ($Expected.Keys | Sort-Object)
+                $Expected.Keys | ForEach-Object {
+                    $Result[$_] | Should -Be $Expected[$_]
+                }
+            }
+            else
+            {
+                $Result | Should -Be $Expected
+            }
         }
     }
 }

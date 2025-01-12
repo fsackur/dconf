@@ -23,8 +23,9 @@ namespace Dconf
 
         public object? Deserialize(string encoded)
         {
+            encoded = GVariantUtils.StripArray(encoded);
             return GVariantUtils
-                .SplitEncodedArray(encoded)
+                .SplitOnComma(encoded)
                 .Select(e => GenericArg.Deserialize(e))
                 .ToArray();
         }

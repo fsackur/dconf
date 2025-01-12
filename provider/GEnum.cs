@@ -123,9 +123,9 @@ namespace Dconf
         public override object? Deserialize(string encoded)
         {
             encoded = Regex.Replace(encoded, @"^@as\s+", "");
-            string[] encodedArray = GVariantUtils.SplitEncodedArray(encoded);
+            encoded = GVariantUtils.StripArray(encoded);
 
-            var names = encodedArray.Select(GVariantUtils.Unquote);
+            var names = GVariantUtils.SplitOnComma(encoded).Select(GVariantUtils.Unquote);
             foreach (string n in names)
             {
                 if (!Enum.TryParse(ManagedType, n, out _))
@@ -133,7 +133,7 @@ namespace Dconf
                     throw new ParseException($"{n} is not a valid case for {ManagedType}");
                 }
             }
-            return Enum.Parse(ManagedType, string.Join(',', names));
+            return Enum.Parse(ManagedType, encoded);
         }
     }
 }

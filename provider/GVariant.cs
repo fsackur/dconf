@@ -11,17 +11,30 @@ namespace Dconf
 {
     internal static class GVariantUtils
     {
+        // TODO: needs a full parser, or we'll get caught out by strings containing commas
+
         private static readonly Regex unquotePattern = new("""^(['\"])?(?<unquoted>.*)\1$""");
         private static readonly Regex arrayPattern = new("""^\[(?<contents>.*)\]$""");
+        private static readonly Regex dictPattern = new("""^\{(?<contents>.*)\}$""");
+        private static readonly Regex commaPattern = new(@",\s*");
+        private static readonly Regex colonPattern = new(@":\s*");
         internal static string Unquote(string s) => unquotePattern.Replace(s, "${unquoted}");
-        internal static string[] SplitEncodedArray(string s)
+
+        internal static string StripArray(string s) => arrayPattern.Replace(s, "${contents}");
+        internal static string StripDict(string s) => dictPattern.Replace(s, "${contents}");
+        internal static string[] SplitOnComma(string s)
         {
-            // TODO: needs a full parser, or we'll get caught out by strings containing commas
-            Regex commaPattern = new(@",\s*");
-            var contents = arrayPattern.Replace(s, "${contents}");
-            return string.IsNullOrEmpty(contents)
-                ? new string[] { }
-                : commaPattern.Split(contents);
+            return string.IsNullOrWhiteSpace(s)
+                ? new string[0]
+                : commaPattern.Split(s);
+        }
+
+        internal static (string, string) SplitKeyValuePair(string s)
+        {
+            var items = colonPattern.Split(s, 2);
+            return items.Length == 2
+                ? (items[0], items[1])
+                : throw new ParseException($"Expected a colon-spearated key-value pair, but got '{s}");
         }
     }
 
@@ -111,7 +124,12 @@ namespace Dconf
                 {
                     IEnumerable<GVariant> genericArgs;
                     (genericArgs, charEnum) = ConsumeUntil(charEnum, CloseCurlyBracket);
-                    return (new GDict(genericArgs), charEnum);
+                    var genArgs = genericArgs.ToArray();
+                    if (genArgs.Length != 2)
+                    {
+                        throw new ParseException($"Expected exactly 2 generic args for {typeof(GDict)}.");
+                    }
+                    return (new GDict(genArgs[0], genArgs[1]), charEnum);
                 },
 
                 _ => charEnum => (GPrimitive.Parse(c), charEnum)

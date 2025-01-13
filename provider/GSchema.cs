@@ -76,8 +76,7 @@ namespace Dconf
                             var value = int.Parse(element.GetAttribute("value"));
                             members.Add(nick, value);
                         }
-                        // type = GEnum.Build(enumName, members, isFlags);
-                        type = null;  // TODO
+                        type = GEnum.Build(enumName, members, isFlags);
                     }
 
                     KeyInfo key = new(

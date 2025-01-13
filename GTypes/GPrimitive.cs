@@ -10,16 +10,11 @@ using System.Globalization;
 
 namespace GTypes
 {
-    public abstract class GPrimitive<T> : GVariant where T: IParsable<T>
+    public abstract class GPrimitive<T> : GVariant<T> where T: IParsable<T>
     {
-        public GPrimitive(T value) => Value = value;
+        public GPrimitive(T value) : base(value) {}
 
-        public GPrimitive(string encoded)
-        {
-            Value = T.Parse(encoded, CultureInfo.InvariantCulture);
-        }
-
-        public override object Value { get; init; }
+        public GPrimitive(string encoded) : base(T.Parse(encoded, CultureInfo.InvariantCulture)) {}
 
         public override Type ManagedType { get => typeof(T); }
     }

@@ -27,6 +27,8 @@ namespace GTypes
 
         private class GNone : GVariant
         {
+            internal GNone() : base(null!) {}
+
             public override object Value
             {
                 get => throw new ParseException($"Cannot get value of a sentinel: {this.GetType()}");
@@ -48,13 +50,7 @@ namespace GTypes
             }
 
             char c = chars.Current;
-            Func<Type, PTypeFunc> make = T => () =>
-            {
-                Type TResult = typeof(GType<>).MakeGenericType(T);
-                var Create = TResult.GetMethod("Create")!;
-                var gType = (GType<GVariant>)Create.Invoke(null, new object[0])!;
-                return (gType, chars);
-            };
+            Func<Type, PTypeFunc> make = T => () => (GVariantUtils.MakeGType(T), chars);
 
             PTypeFunc consume = c switch
             {
@@ -66,12 +62,12 @@ namespace GTypes
                 'u' => make(typeof(GUInt32)),
                 'x' => make(typeof(GInt64)),
                 't' => make(typeof(GUInt64)),
-                // 'h' => make(typeof(GInt32)),  // TODO: handle..?
+                'h' => make(typeof(GInt32)),  // TODO: handle..?
                 'd' => make(typeof(GDouble)),
-                // 'v' => make(typeof(Object)),  // TODO: object..?
+                'v' => make(typeof(GVariant<object>)),  // TODO: object..?
                 's' => make(typeof(GString)),
-                // 'o' => make(typeof(String)),
-                // 'g' => make(typeof(String)),
+                'o' => make(typeof(GString)),  // TODO: further processing
+                'g' => make(typeof(GString)),  // TODO: further processing
                 _ => throw new ParseException($"Not a type: {c}")
             };
 

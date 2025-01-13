@@ -1,3 +1,6 @@
 @{
-    DotnetProjects = @('GTypes', 'provider')
+    DotnetProjects = @(
+        'GTypes'
+        # , 'provider'
+    )
 }

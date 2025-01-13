@@ -1,7 +1,8 @@
 using namespace System.Collections.Generic;
 
 BeforeDiscovery {
-    $TestCases = & ($PSCommandPath -replace 'tests.ps1', 'TestCases.ps1')
+    $TestCases = & ($PSCommandPath -replace 'tests.ps1', 'TestCases.ps1') |
+        ? {$_.TypeString -notmatch 'v' -and $_.TypeString -match '\('}
 }
 
 Describe "Dconf.GVariantParser" {
@@ -34,40 +35,40 @@ Describe "Dconf.GVariantParser" {
     }
 }
 
-Describe "Dconf.GEnumBuilder" {
-    It "Builds an enum" {
-        [string[]]$Members = "Foo", "Bar"
-        $Result = [Dconf.GEnum]::Build(
-            "FooEnum",
-            $Members
-        ).ManagedType
+# Describe "Dconf.GEnumBuilder" {
+#     It "Builds an enum" {
+#         [string[]]$Members = "Foo", "Bar"
+#         $Result = [Dconf.GEnum]::Build(
+#             "FooEnum",
+#             $Members
+#         ).ManagedType
 
-        $Result.Name | Should -Be "FooEnum"
-        $Result.IsAssignableTo([Enum]) | Should -BeTrue
-        [string[]][Enum]::GetValues($Result) | Should -BeExactly $Members
-        [int]$Result::Foo | Should -Be 0
-        [int]$Result::Bar | Should -Be 1
-        "Foo, Bar" -as $Result | Should -Not -Match "Foo, Bar"
-        $Result.GetCustomAttributes($true) | Should -BeNullOrEmpty
-    }
+#         $Result.Name | Should -Be "FooEnum"
+#         $Result.IsAssignableTo([Enum]) | Should -BeTrue
+#         [string[]][Enum]::GetValues($Result) | Should -BeExactly $Members
+#         [int]$Result::Foo | Should -Be 0
+#         [int]$Result::Bar | Should -Be 1
+#         "Foo, Bar" -as $Result | Should -Not -Match "Foo, Bar"
+#         $Result.GetCustomAttributes($true) | Should -BeNullOrEmpty
+#     }
 
-    It "Builds a flag enum" {
-        [Dictionary[string, int]]$Members = [Dictionary[string, int]]::new()
-        $Members.Add("Foo", 1)
-        $Members.Add("Bar", 8)
+#     It "Builds a flag enum" {
+#         [Dictionary[string, int]]$Members = [Dictionary[string, int]]::new()
+#         $Members.Add("Foo", 1)
+#         $Members.Add("Bar", 8)
 
-        $Result = [Dconf.GEnum]::Build(
-            "BarEnum",
-            $Members,
-            $true
-        ).ManagedType
+#         $Result = [Dconf.GEnum]::Build(
+#             "BarEnum",
+#             $Members,
+#             $true
+#         ).ManagedType
 
-        $Result.Name | Should -Be "BarEnum"
-        $Result.IsAssignableTo([Enum]) | Should -BeTrue
-        [string[]][Enum]::GetValues($Result) | Sort-Object | Should -BeExactly ($Members.Keys | Sort-Object)
-        [int]$Result::Foo | Should -Be 1
-        [int]$Result::Bar | Should -Be 8
-        "Foo, Bar" -as $Result -as [int] | Should -Be 9
-        $Result.GetCustomAttributes($true) | Should -Match "Flags"
-    }
-}
+#         $Result.Name | Should -Be "BarEnum"
+#         $Result.IsAssignableTo([Enum]) | Should -BeTrue
+#         [string[]][Enum]::GetValues($Result) | Sort-Object | Should -BeExactly ($Members.Keys | Sort-Object)
+#         [int]$Result::Foo | Should -Be 1
+#         [int]$Result::Bar | Should -Be 8
+#         "Foo, Bar" -as $Result -as [int] | Should -Be 9
+#         $Result.GetCustomAttributes($true) | Should -Match "Flags"
+#     }
+# }

@@ -45,7 +45,7 @@ namespace Dconf
                     GVariant type;
                     if (typeString != string.Empty)
                     {
-                        type = GVariantParser.Parse(typeString);
+                        type = GVariantParser.ParseType(typeString);
                     }
                     else
                     {

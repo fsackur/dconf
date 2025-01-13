@@ -141,7 +141,7 @@ namespace Dconf
             return consume(charEnum);
         }
 
-        public static GVariant Parse(string typeString)
+        public static GVariant ParseType(string typeString)
         {
             if (string.IsNullOrEmpty(typeString))
             {
@@ -150,6 +150,67 @@ namespace Dconf
 
             var (v, charEnum) = Consume(typeString.GetEnumerator());
             if (v is GSentinel) { throw new ParseException("We should not have sentinel values here"); }
+            if (charEnum.MoveNext()) { throw new ParseException("We should have consumed all chars"); }
+            return v;
+        }
+
+        private static string Pop(IEnumerable<char> chars) => new(chars);
+
+        private static (Token, IEnumerator<char>) Consume(
+            IEnumerator<char> charEnum,
+            List<char> buffer,
+            char? endMarker = null
+        )
+        {
+            if (!charEnum.MoveNext())
+            {
+                return (null, charEnum);
+            }
+
+            bool isQuoted = endMarker == '\'' || endMarker == '"';
+            bool bufferIsEmpty = buffer.Count() == 0;
+            char c = charEnum.Current;
+
+            Func<IEnumerator<char>, (Token, IEnumerator<char>)> consume;
+            consume = c switch
+            {
+                endMarker => charEnum => (PopBuffer(buffer), charEnum),
+
+                ' ' when !isQuoted && bufferIsEmpty => charEnum => Consume(charEnum, buffer, endMarker),
+
+                ' ' when !isQuoted => charEnum => (PopBuffer(buffer), charEnum),
+
+                '\'' or '"' => charEnum => Consume(charEnum, new(), endMarker: c),
+
+                '@' when !isQuoted && bufferIsEmpty => charEnum =>
+                {
+                    Token hint;
+                    (hint, charEnum) = Consume(charEnum, buffer, endMarker: c);
+                    Token value;
+                    (value, charEnum) = Consume(charEnum, new(), endMarker: c);
+                    return (new HintedToken(value.Value, ParseType(hint.Value)), charEnum);
+                },
+
+                ',' when !isQuoted => (PopBuffer(buffer), charEnum),
+
+                _ => charEnum =>
+                {
+                    buffer.Add(c);
+                    return Consume(charEnum, buffer, endMarker);
+                }
+            };
+
+            return consume(charEnum);
+        }
+
+        public static GVariant Parse(string encoded)
+        {
+            if (string.IsNullOrEmpty(encoded))
+            {
+                return None;
+            }
+
+            var (v, charEnum) = Consume(encoded.GetEnumerator());
             if (charEnum.MoveNext()) { throw new ParseException("We should have consumed all chars"); }
             return v;
         }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Xml;
 using System.Linq;
 using System.Text.RegularExpressions;
+using GTypes;
 
 namespace Dconf
 {
@@ -42,10 +43,10 @@ namespace Dconf
                 {
                     string name = xmlKey.GetAttribute("name");
                     string typeString = xmlKey.GetAttribute("type");
-                    GVariant type;
+                    GType<GVariant> type;
                     if (typeString != string.Empty)
                     {
-                        type = GVariantParser.ParseType(typeString);
+                        type = Parser.ParseType(typeString);
                     }
                     else
                     {
@@ -75,7 +76,8 @@ namespace Dconf
                             var value = int.Parse(element.GetAttribute("value"));
                             members.Add(nick, value);
                         }
-                        type = GEnum.Build(enumName, members, isFlags);
+                        // type = GEnum.Build(enumName, members, isFlags);
+                        type = null;  // TODO
                     }
 
                     KeyInfo key = new(

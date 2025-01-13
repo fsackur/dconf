@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using GTypes;
 
 namespace Dconf
 {
@@ -96,7 +97,7 @@ namespace Dconf
             string name,
             string path,
             string schemaFile,
-            GVariant? type = null,
+            GType<GVariant>? type = null,
             string? _default = null,
             string? summary = null,
             string? description = null
@@ -113,7 +114,7 @@ namespace Dconf
 
         public string Schema { get; init; }
 
-        public GVariant? Type { get; init; }
+        public GType<GVariant>? Type { get; init; }
 
         public string? Summary { get; init; }
 

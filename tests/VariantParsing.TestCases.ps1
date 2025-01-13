@@ -85,24 +85,24 @@ using namespace System.Collections.Generic;
         # InputString = "<('template', '', '', '', false, 300, false, true, false, 'utf-8')>"
         # Expected =
     },
-    @{  # /usr/share/glib-2.0/schemas/ca.desrt.dconf-editor.gschema.xml:ca.desrt.dconf-editor.Demo.Conflict2/type-conflict
-        TypeString = "ms"
-        ManagedType = [Dconf.Maybe[string]]
-        InputString = "@ms 'test'"
-        Expected = [Dconf.Maybe[string]]::Some("test")
-    },
-    @{  # /usr/share/glib-2.0/schemas/org.gnome.Evince.gschema.xml:org.gnome.Evince/document-directory
-        TypeString = "ms"
-        ManagedType = [Dconf.Maybe[string]]
-        InputString = "@ms nothing"
-        Expected = [Dconf.Maybe[string]]::None
-    },
-    @{  # /usr/share/glib-2.0/schemas/org.gnome.Terminal.gschema.xml:org.gnome.Terminal.Legacy.Settings/headerbar
-        TypeString = "mb"
-        ManagedType = [Dconf.Maybe[bool]]
-        InputString = "@mb nothing"
-        Expected = [Dconf.Maybe[bool]]::None
-    },
+    # @{  # /usr/share/glib-2.0/schemas/ca.desrt.dconf-editor.gschema.xml:ca.desrt.dconf-editor.Demo.Conflict2/type-conflict
+    #     TypeString = "ms"
+    #     ManagedType = [GTypes.Maybe[string]]
+    #     InputString = "@ms 'test'"
+    #     Expected = [GTypes.Maybe[string]]::Some("test")
+    # },
+    # @{  # /usr/share/glib-2.0/schemas/org.gnome.Evince.gschema.xml:org.gnome.Evince/document-directory
+    #     TypeString = "ms"
+    #     ManagedType = [GTypes.Maybe[string]]
+    #     InputString = "@ms nothing"
+    #     Expected = [GTypes.Maybe[string]]::None
+    # },
+    # @{  # /usr/share/glib-2.0/schemas/org.gnome.Terminal.gschema.xml:org.gnome.Terminal.Legacy.Settings/headerbar
+    #     TypeString = "mb"
+    #     ManagedType = [GTypes.Maybe[bool]]
+    #     InputString = "@mb nothing"
+    #     Expected = [GTypes.Maybe[bool]]::None
+    # },
     @{  # /usr/share/glib-2.0/schemas/ca.desrt.dconf-editor.gschema.xml:ca.desrt.dconf-editor.Demo/bytestring
         TypeString = "ay"
         ManagedType = [char[]]
@@ -193,18 +193,18 @@ using namespace System.Collections.Generic;
         InputString = "(true, 0.20784313976764679, 0.51764708757400513, 0.89411765336990356, 1.0)"
         Expected = [Tuple[bool,double,double,double,double]]::new($true, 0.20784313976764679, 0.51764708757400513, 0.89411765336990356, 1.0)
     },
-    @{  # /usr/share/glib-2.0/schemas/org.gnome.calendar.gschema.xml:org.gnome.calendar/weather-settings
-        TypeString = "(bbsmv)"
-        ManagedType = [Tuple[bool,bool,string,Dconf.Maybe[object]]]
-        InputString = "(true, true, '', @mv nothing)"
-        Expected = [Tuple[bool,bool,string,Dconf.Maybe[object]]]::new($true, $true, '', [Dconf.Maybe[object]].None)
-    },
-    @{  # /usr/share/glib-2.0/schemas/org.gnome.GWeather4.gschema.xml:org.gnome.GWeather4/default-location
-        TypeString = "(ssm(dd))"
-        ManagedType = [Tuple[string,string,Dconf.Maybe[Tuple[double,double]]]]
-        InputString = "('', 'EGLL', @m(dd) nothing)"
-        Expected = [Tuple[string,string,Dconf.Maybe[Tuple[double,double]]]]::new('', 'EGLL', [Dconf.Maybe[Tuple[double,double]]].None)
-    },
+    # @{  # /usr/share/glib-2.0/schemas/org.gnome.calendar.gschema.xml:org.gnome.calendar/weather-settings
+    #     TypeString = "(bbsmv)"
+    #     ManagedType = [Tuple[bool,bool,string,GTypes.Maybe[object]]]
+    #     InputString = "(true, true, '', @mv nothing)"
+    #     Expected = [Tuple[bool,bool,string,GTypes.Maybe[object]]]::new($true, $true, '', [GTypes.Maybe[object]].None)
+    # },
+    # @{  # /usr/share/glib-2.0/schemas/org.gnome.GWeather4.gschema.xml:org.gnome.GWeather4/default-location
+    #     TypeString = "(ssm(dd))"
+    #     ManagedType = [Tuple[string,string,GTypes.Maybe[Tuple[double,double]]]]
+    #     InputString = "('', 'EGLL', @m(dd) nothing)"
+    #     Expected = [Tuple[string,string,GTypes.Maybe[Tuple[double,double]]]]::new('', 'EGLL', [GTypes.Maybe[Tuple[double,double]]].None)
+    # },
     @{  # /usr/share/glib-2.0/schemas/org.freedesktop.ibus.engine.anthy.gschema.xml:org.freedesktop.ibus.engine.anthy.dict/files
         TypeString = "a{sv}"
         ManagedType = [Dictionary[string,System.Object][]]

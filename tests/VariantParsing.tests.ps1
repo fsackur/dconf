@@ -2,7 +2,11 @@ using namespace System.Collections.Generic;
 
 BeforeDiscovery {
     $TestCases = & ($PSCommandPath -replace 'tests.ps1', 'TestCases.ps1') |
-        ? {$_.TypeString -match 'a'}
+        ? {
+            $_.TypeString.Length -le 2
+            # $_.TypeString -match 'a'
+        # } | select -first 1
+        }
 }
 
 Describe "Dconf.GVariantParser" {

@@ -10,7 +10,7 @@ using System.Globalization;
 
 namespace GTypes
 {
-    internal static class GVariantUtils
+    public static class GType
     {
         private static Regex unquotePattern = new("""^(['\"])?(?<unquoted>.*)\1$""");
         private static Regex arrayPattern = new("""^(\[)(?<contents>.*)\1$""");
@@ -24,17 +24,22 @@ namespace GTypes
                 : commaPattern.Split(contents);
         }
 
-        internal static GType<GVariant> MakeGType(Type T)
+        public static GType<GVariant> Create(Type T)
         {
-            Type TResult = typeof(GType<>).MakeGenericType(T);
-            var Create = TResult.GetMethod("Create")!;
-            return (GType<GVariant>)Create.Invoke(null, new object[0])!;
+            // Type TResult = typeof(GType<>).MakeGenericType(T);
+            // var Create = TResult.GetMethod("Create")!;
+            // return (GType<GVariant>)Create.Invoke(null, new object[0])!;
+            Type concrete = typeof(GTypeImpl<>).MakeGenericType(T);
+            var ctor = concrete.GetConstructor(new Type[0])!;
+            return (GType<GVariant>)ctor.Invoke(new object[0]);
         }
     }
 
     public interface GType<out T> where T : GVariant
     {
         public static GType<T> Create() => new GTypeImpl<T>();
+
+        public Type GVariant { get => typeof(T); }
 
         public Type ManagedType
         {
@@ -51,7 +56,7 @@ namespace GTypes
         }
     }
 
-    public class GTypeImpl<T> : GType<T> where T : GVariant {}
+    internal class GTypeImpl<T> : GType<T> where T : GVariant {}
 
     public abstract class GVariant
     {

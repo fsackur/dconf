@@ -88,7 +88,7 @@ namespace GTypes
 
             Type genDef = isFlags ? typeof(GFlagsEnum<>) : typeof(GEnum<>);
             Type T = genDef.MakeGenericType(new Type[] { managedType });
-            return (GType<GEnum>)GVariantUtils.MakeGType(T);
+            return (GType<GEnum>)GType.Create(T);
             // var ctor = genType.GetConstructor(new Type[0])!;
             // return (GEnum)ctor.Invoke(new object[0]);
         }
@@ -110,7 +110,7 @@ namespace GTypes
     {
         public static T Parse(string encoded, bool ignoreCase = false)
         {
-            string name = GVariantUtils.Unquote(encoded);
+            string name = GType.Unquote(encoded);
             return Enum.TryParse(typeof(T), name, ignoreCase, out object? result)
                 ? (T)result
                 : throw new ParseException($"{name} is not a valid case for {typeof(T)}");
@@ -130,9 +130,9 @@ namespace GTypes
         public new static T Parse(string encoded, bool ignoreCase = false)
         {
             encoded = Regex.Replace(encoded, @"^@a?s\s+", "");
-            string[] encodedArray = GVariantUtils.SplitEncodedArray(encoded);
+            string[] encodedArray = GType.SplitEncodedArray(encoded);
 
-            var names = encodedArray.Select(GVariantUtils.Unquote);
+            var names = encodedArray.Select(GType.Unquote);
             foreach (string n in names)
             {
                 if (!Enum.TryParse(typeof(T), n, ignoreCase, out _))

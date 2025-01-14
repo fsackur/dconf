@@ -75,6 +75,6 @@ namespace GTypes
 
     public class GString : GPrimitive<string>
     {
-        public GString(string value) : base(GVariantUtils.Unquote(value)) {}
+        public GString(string value) : base(GType.Unquote(value)) {}
     }
 }

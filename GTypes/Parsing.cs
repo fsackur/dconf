@@ -50,7 +50,7 @@ namespace GTypes
             }
 
             char c = chars.Current;
-            Func<Type, PTypeFunc> make = T => () => (GVariantUtils.MakeGType(T), chars);
+            Func<Type, PTypeFunc> make = T => () => (GType.Create(T), chars);
 
             PTypeFunc consume = c switch
             {
@@ -68,6 +68,18 @@ namespace GTypes
                 's' => make(typeof(GString)),
                 'o' => make(typeof(GString)),  // TODO: further processing
                 'g' => make(typeof(GString)),  // TODO: further processing
+
+                'a' => () =>
+                {
+                    GType<GVariant> gType;
+                    (gType, chars) = ConsumeType(chars);
+                    Console.WriteLine($"{gType} {gType.GVariant}");
+                    Type arrayType = gType.GVariant.MakeArrayType();
+                    // typeof(IEnumerable<>).MakeGenericType(gType.GetType());
+                    Type T = typeof(GArray<>).MakeGenericType(arrayType);
+                    return (GType.Create(T), chars);
+                },
+
                 _ => throw new ParseException($"Not a type: {c}")
             };
 

@@ -131,20 +131,40 @@ namespace GTypes
             PFunc recurse = () => Consume(gType, chars, buffer, endMarker);
             PFunc pushAndRecurse = () => { buffer.Add(c); return recurse(); };
 
-            if (c == endMarker) { return pop(); }
-            if (isQuoted) { return pushAndRecurse(); }
+            // if (c == endMarker) { return pop(); }
+            // if (isQuoted) { return pushAndRecurse(); }
 
             PFunc consume = c switch
             {
+                '\'' or '"' => () =>
+                {
+                    bool isClosingQuote = c == endMarker;
+                    if (isClosingQuote && !bufferIsEmpty)
+                    {
+                        var revBuffer = ((IEnumerable<char>)buffer).Reverse();
+                        var escapeCount = revBuffer.TakeWhile(c => c == '\\').Count();
+                        isClosingQuote = escapeCount % 2 == 0;
+                    }
+                    if (isClosingQuote)
+                    {
+                        return pop();
+                    }
+                    else if (bufferIsEmpty)
+                    {
+                        endMarker = c;
+                        return recurse();
+                    }
+                    else
+                    {
+                        return pushAndRecurse();
+                    }
+                },
+
+                _ when c == endMarker => pop,
+
                 ' ' when bufferIsEmpty => recurse,
                 ' ' => pop,
                 ',' => pop,
-
-                '\'' or '"' => () =>
-                {
-                    endMarker = c;
-                    return recurse();
-                },
 
                 '@' when bufferIsEmpty => () =>
                 {
@@ -163,6 +183,20 @@ namespace GTypes
                         ? new GChar((char)value.Value)
                         : Pop(origType, value.Value.ToString()!);
                     return (value, chars);
+                },
+
+                '[' => () =>
+                {
+                    endMarker = ']';
+                    GVariant element;
+                    List<GVariant> elements = [];
+                    while (true)
+                    {
+                        (element, chars) = recurse();
+                        if (element != None) { break; }
+                        elements.Add(element);
+                    }
+                    return (new GArray<GVariant[]>(elements.ToArray()), chars);
                 },
 
                 _ => pushAndRecurse

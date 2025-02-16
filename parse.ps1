@@ -5,7 +5,9 @@ param
         "~/.local/share/gnome-shell/extensions/*/schemas/"
     ),
 
-    [string[]]$Types = "*"
+    [string[]]$Types = "*",
+
+    [switch]$ParseEnumNames
 )
 
 $Files = gci $Paths -Filter *.gschema.xml #-Exclude ca.desrt.dconf-editor.gschema.xml
@@ -24,10 +26,16 @@ foreach ($File in $Files)
         {
             $name = $key.GetAttribute("name")
             $typeName = $key.GetAttribute("type")
-            $enumName = $key.GetAttribute("enum")
-            $flagName = $key.GetAttribute("flags")
-            $typeString = $typeName, $enumName, $flagName | where {$_} | select -first 1
-
+            $typeString = if (-not $ParseEnumNames)
+            {
+                $typeName
+            }
+            else
+            {
+                $enumName = $key.GetAttribute("enum")
+                $flagName = $key.GetAttribute("flags")
+                $typeString = $typeName, $enumName, $flagName | where {$_} | select -first 1
+            }
             if ($Types | where {$typeString -like $_})
             {
                 [pscustomobject]@{

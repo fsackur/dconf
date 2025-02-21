@@ -5,6 +5,8 @@ $Folders |
     ForEach-Object {. $_}
 #endregion build-inlines
 
+$Script:DCONF_RESET_SENTINEL = "<default>"
+
 $PathCompleter = {
     param ($commandName, $parameterName, $wordToComplete, $commandAst, $fakeBoundParameters)
 

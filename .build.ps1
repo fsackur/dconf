@@ -290,12 +290,12 @@ task Includes @{
 
 task BuildPowershell @{
     Inputs = {(
-        ($PSScriptFolders | ForEach-Object {"$_/*.ps1"} | Get-ChildItem -ErrorAction Ignore),
+        (Get-ChildItem -Directory | ? Name -in $PSScriptFolders | Get-ChildItem -Filter *.ps1),
         $Psd1SourcePath,
         $RootModule
-    ) | Write-Output}
+    ) | Write-Output | Get-Item}
     Outputs = {$BuiltManifest, $BuiltRootModule}
-    Jobs = "UpdateVersion", "BuildDir", {
+    Jobs = "UpdateVersion", "BuildDir", "Includes", {
         $Requirements = @()
         $Usings = @()
 
@@ -353,7 +353,7 @@ task BuildPowershell @{
 task BuildDotnet @{
     Inputs = {$DotnetProjects | ForEach-Object {"$_/*.cs", "$_/*.csproj"} | Get-ChildItem -ErrorAction Ignore}
     Outputs = {$DotnetProjects | ForEach-Object {"$BuildDir/$_.dll"}}
-    Jobs = "BuildDir", {
+    Jobs = "BuildDir", "Includes", {
         if (-not $DotnetProjects) {return}
 
         $DotnetProjects | ForEach-Object {
@@ -383,7 +383,7 @@ task Lint {
 }
 
 task UnitTest Build, {
-    [bool]$UseNewProcess = $DotnetProjects
+    [bool]$UseNewProcess = [bool]$DotnetProjects
 
     $Run = $PesterConfiguration.Run
     if ($null -eq $Run)

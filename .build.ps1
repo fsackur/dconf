@@ -197,7 +197,7 @@ task InstallBuildDependencies $InstallBuildDependencies
 $AssertTool = {assert (Get-Command $Tool.ToLower() -ErrorAction Ignore) "$Tool not found"}
 task AssertGit {$Tool = "git"; & $AssertTool}
 task AssertZip {$Tool = "zip"; & $AssertTool}
-task AssertGH {$Tool = "gh"; & $AssertTool}
+task AssertGH {$Tool = "gh"; & $AssertTool; assert ((gh auth status -a -h github.com) -match 'Logged in to github.com account') "GH client needs to log in"}
 
 task SelfUpdate $SelfUpdate
 
@@ -516,13 +516,13 @@ task Zip AssertZip, Build, {
 
 task GithubRelease AssertGh, Tag, Push, Package, Zip, {
     $Output = gh release view $Tag *>&1
-    if ($Output -ne "release not found")
+    if ($Output -notmatch "release not found")
     {
         $Message = if ($?) {"A release exists already for $Tag"} else {$Output | Out-String}
         assert $false $Message
     }
     $Output = gh release create $Tag --notes $Tag $ZipFile $PackageFile *>&1
-    assert $false ($Output | Out-String)
+    assert ($LASTEXITCODE -eq 0) ($Output | Out-String)
 }
 
 task PSGallery BuildDir, {

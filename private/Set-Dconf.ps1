@@ -74,7 +74,14 @@ function Set-Dconf
             $Key, $Value = $Line -split '=', 2
             $FullKey = $_Path, $Key -join '/' -replace '/{2,}', '/'
 
-            dconf write $FullKey "$Value"
+            if ($Value -eq $Script:DCONF_RESET_SENTINEL)
+            {
+                dconf reset $FullKey
+            }
+            else
+            {
+                dconf write $FullKey "$Value"
+            }
 
             if (-not $?)
             {

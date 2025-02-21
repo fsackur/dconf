@@ -1,0 +1,5 @@
+@{
+    DotnetProjects = @(
+        'KeyInfo'
+    )
+}

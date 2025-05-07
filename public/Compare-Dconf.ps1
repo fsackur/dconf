@@ -64,22 +64,22 @@ function Compare-Dconf
 
     $Ref = if ($null -eq $ReferenceObject)
     {
-        Export-Dconf | ConvertTo-PSObject
+        Export-Dconf | ConvertTo-KeyInfo
         Write-Host "Captured dconf snapshot"
     }
     else
     {
-        $ReferenceObject | ConvertTo-PSObject
+        $ReferenceObject | ConvertTo-KeyInfo
     }
 
     $Diff = if ($null -eq $DifferenceObject)
     {
         $null = Read-Host "Waiting to capture snapshot (press enter after making changes)"
-        Export-Dconf | ConvertTo-PSObject
+        Export-Dconf | ConvertTo-KeyInfo
     }
     else
     {
-        $DifferenceObject | ConvertTo-PSObject
+        $DifferenceObject | ConvertTo-KeyInfo
     }
 
     $DiffsByPath = Compare-Object $Ref $Diff -Property FullName, Value | Group-Object FullName

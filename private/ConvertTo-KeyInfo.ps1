@@ -1,4 +1,4 @@
-function ConvertTo-PSObject
+function ConvertTo-KeyInfo
 {
     <#
         .DESCRIPTION
@@ -6,6 +6,7 @@ function ConvertTo-PSObject
     #>
 
     [CmdletBinding()]
+    [OutputType([Dconf.KeyInfo[]])]
     param
     (
         [Parameter(Mandatory, Position = 0, ValueFromPipeline)]
@@ -20,7 +21,7 @@ function ConvertTo-PSObject
             $InputObject = $input
         }
 
-        $InputObject = $InputObject | Out-String | ForEach-Object Trim
+        $InputObject = $InputObject | Out-String | ForEach-Object Trim | Select-Object -Unique
 
         $InputObject -split "\n" |
             Where-Object {-not [string]::IsNullOrWhiteSpace($_)} |

@@ -76,6 +76,7 @@ FormatsToProcess = @(
 FunctionsToExport = @(
     'Compare-Dconf',
     'Export-Dconf',
+    'Format-Dconf',
     'Import-Dconf'
 )
 
@@ -141,4 +142,3 @@ PrivateData = @{
 # DefaultCommandPrefix = ''
 
 }
-

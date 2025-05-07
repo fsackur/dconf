@@ -364,6 +364,15 @@ task BuildDotnet @{
 
 task Build Includes, BuildDotnet, BuildPowershell
 
+task Install Build, {
+    $PSModulePaths = $env:PSModulePath -split [System.IO.Path]::PathSeparator
+    $PSModulePath = $PSModulePaths | Where-Object {$_.StartsWith($env:HOME)} | Select-Object -Last 1
+    $InstallPath = Join-Path $PSModulePath $ModuleName
+    $VersionedInstallPath = Join-Path $InstallPath $Version
+    Remove-Item $VersionedInstallPath -Recurse -Force -ErrorAction Ignore
+    Copy-Item -Recurse $BuildDir $VersionedInstallPath
+}
+
 task Lint {
     $Files = $Include, $PSScriptFolders |
         Write-Output |
